@@ -19,8 +19,8 @@
 
 #include "processors/threaded_char_chunk_processor.hpp"
 
-#include "aux/line.hpp"
-#include "aux/line_handler_ctx.hpp"
+#include "aux/chunk.hpp"
+#include "aux/chunk_handler_ctx.hpp"
 
 namespace mtfind::strat
 {
@@ -28,73 +28,89 @@ namespace mtfind::strat
 namespace detail
 {
 
-template<typename LineReader, typename Handler>
-int process_rr(LineReader &line_reader, Handler line_handler, bool process_empty_lines = false)
+template<typename T1, typename T2>
+struct RRChunk
 {
-    size_t line_idx = 1;
-    // process the input file line by line
-    if (process_empty_lines)
+    T1 idx;
+    T2 value;
+};
+
+template<typename ChunkReader, typename ChunkHandler>
+int process_rr(ChunkReader &reader, ChunkHandler handler, bool process_empty_chunks = false)
+{
+    // process the input file chunk by chunk
+    if (process_empty_chunks)
     {
-        for (auto line = line_reader(); line_reader; ++line_idx, line = line_reader())
-            line_handler(line_idx, line);
+        size_t chunk_idx = 0;
+        for (auto chunk = reader(); reader; ++chunk_idx, chunk = reader())
+            handler(chunk_idx, std::move(chunk));
     }
     else
     {
-        for (auto line = line_reader(); line_reader; ++line_idx, line = line_reader())
+        size_t chunk_idx = 0;
+        for (auto chunk = reader(); reader; ++chunk_idx, chunk = reader())
         {
-            if (!line.empty())
-                line_handler(line_idx, line);
+            if (!chunk.empty())
+                handler(chunk_idx, std::move(chunk));
         }
     }
     return 0;
 }
 
-template<typename LineReader, typename Generator>
-int process_rr(LineReader &line_reader, Generator handler_gen, size_t workers_count = 1, bool process_empty_lines = false)
+template<typename ChunkReader, typename ChunkHandlerGenerator>
+int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t workers_count = 1, bool process_empty_chunks = false)
 {
     if (workers_count < 2)
-        return process_rr(line_reader, handler_gen(), process_empty_lines);
+        return process_rr(reader, generator(), process_empty_chunks);
 
     auto const processors_count = workers_count - 1;
 
-    using LineProcessor = ThreadedCharChunkProcessor<decltype(handler_gen())>;
-    std::vector<std::unique_ptr<LineProcessor>> workers;
-    workers.reserve(processors_count);
-    std::generate_n(std::back_inserter(workers), processors_count, [=] () mutable { return std::make_unique<LineProcessor>(handler_gen()); });
+    auto generator_wrapper = [generator] () mutable {
+        return [handler = generator()](auto &&chunk) mutable {
+            handler(chunk.idx, std::forward<decltype(chunk.value)>(chunk.value));
+        };
+    };
 
-    // start line processors up
+    using Chunk = RRChunk<size_t, decltype(reader())>;
+    using ChunkProcessor = ThreadedCharChunkProcessor<decltype(generator_wrapper()), Chunk>;
+
+    std::vector<std::unique_ptr<ChunkProcessor>> workers;
+    workers.reserve(processors_count);
+    std::generate_n(std::back_inserter(workers), processors_count, [=] () mutable { return std::make_unique<ChunkProcessor>(generator_wrapper()); });
+
+    // start chunk processors up
     for (auto &worker : workers)
         worker->start();
 
     auto rr_handler = [first = workers.begin(),
         last = workers.end(),
-        worker_it = workers.begin()](auto line_idx, auto &&line) mutable {
-            (*(*worker_it))(line_idx, std::forward<decltype(line)>(line));
+        worker_it = workers.begin()](auto chunk_idx, auto &&value) mutable {
+            (*(*worker_it))({chunk_idx, std::move(value)});
             ++worker_it;
             if (last == worker_it)
                 worker_it = first;
     };
 
-    // process the input file line by line handing lines over workers
-    // with each new line we switch to the next worker, this way we're balancing
+    // process the input file chunk by chunk handing chunks over workers
+    // with each new chunk we switch to the next worker, this way we're balancing
     // the load between workers
-    if (process_empty_lines)
+    if (process_empty_chunks)
     {
-        size_t line_idx = 1;
-        for (auto line = line_reader(); line_reader; ++line_idx, line = line_reader())
-            rr_handler(line_idx, line);
+        size_t chunk_idx = 0;
+        for (auto chunk = reader(); reader; ++chunk_idx, chunk = reader())
+            rr_handler(chunk_idx, std::move(chunk));
     }
     else
     {
-        size_t line_idx = 1;
-        for (auto line = line_reader(); line_reader; ++line_idx, line = line_reader())
+        size_t chunk_idx = 0;
+        for (auto chunk = reader(); reader; ++chunk_idx, chunk = reader())
         {
-            if (!line.empty())
-                rr_handler(line_idx, line);
+            if (!chunk.empty())
+                rr_handler(chunk_idx, std::move(chunk));
         }
     }
 
-    // stop line processors, wait for the workers to finish
+    // stop chunk processors, wait for the workers to finish
     for (auto &worker : workers)
         worker->stop();
 
@@ -104,79 +120,80 @@ int process_rr(LineReader &line_reader, Generator handler_gen, size_t workers_co
 } // namespace detail
 
 ///
-/// @brief      Process and parse with a parser each line of the region provided by a range
-///             All the findings will be provided via a sink callback in line index ascending order
+/// @brief      Process and parse with a tokenizer each chunk of the region provided by a range
+///             All the findings will be provided via a sink callback in chunk index ascending order
 ///             Strategy 'Round-robin' is used
 ///
 /// @details    Round-robin approach is about distributing the load among the workers
-///             equally by calling them to process lines one by one
-///             The underlying implementation reads a source region line by line and
-///             iterates over the workers passing them lines with their indices, no synchronization
+///             equally by calling them to process chunks one by one
+///             The underlying implementation reads a source region chunk by chunk and
+///             iterates over the workers passing them chunks with their indices, no synchronization
 ///             is required
 ///
-/// @param[in]  line_reader         The functor-like object that would be called to receive a line
-///                                 On each iteration the reader is called If lines are exhausted by calling operator !
-/// @param[in]  last                Forward iterator to the past the last character of the region
-/// @param[in]  parser              The parser being called on each line
-/// @param[in]  line_findings_sink  The sink for line findings
-/// @param[in]  workers_count       The number of threads to be used
+/// @param[in]  reader         The functor-like object that would be called to receive a chunk
+///                            On each iteration the reader is called If chunks are exhausted by calling operator !
+/// @param[in]  last           Forward iterator to the past the last character of the region
+/// @param[in]  tokenizer      The tokenizer being called on each chunk
+/// @param[in]  findings_sink  The sink for chunk findings
+/// @param[in]  workers_count  The number of threads to be used
 ///
-/// @tparam     Iterator            Forward character iterator
-/// @tparam     Parser              A Functor like parser for a line
-/// @tparam     LineFindingsSink    A Functor-like sink type
+/// @tparam     ChunkReader    A reader that will fetch a chunk until reader's source is depleted
+/// @tparam     ChunkTokenizer A Functor like tokenizer for a chunk
+/// @tparam     FindingsSink   A Functor-like sink type
 ///
 /// @return     0 in case of success, any other value otherwise
 ///
-template<typename LineReader, typename Parser, typename LineFindingsSink>
-int round_robin(LineReader &line_reader, Parser line_parser, LineFindingsSink &&line_findings_sink, size_t workers_count = std::thread::hardware_concurrency())
+template<typename ChunkReader, typename ChunkTokenizer, typename FindingsSink>
+int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsSink findings_sink, size_t workers_count = std::thread::hardware_concurrency())
 {
     if (0 == workers_count)
         workers_count = 1;
 
-    using HandlerCtx = mtfind::detail::LineHandlerCtx;
-    std::vector<HandlerCtx> handlers_ctxs(workers_count);
+    using ContextType = mtfind::detail::ChunkHandlerCtx<decltype(reader())>;
+    std::vector<ContextType> handlers_ctxs(workers_count);
 
-    // generators of handlers of the file's lines being read
-    auto line_handler_gen = [line_parser, ctx_it = handlers_ctxs.begin()] () mutable {
-        // the handler will be called on each line by a worker
-        // every worker is given a line and its index, which they pass to this handler
-        return [line_parser, &ctx = *ctx_it++](auto line_idx, auto const &line) mutable {
-            auto range_of_findings = line_parser(line);
+    // generators of handlers of the file's chunks being read
+    auto chunk_handler_gen = [tokenizer, ctx_it = handlers_ctxs.begin()] () mutable {
+        // the handler will be called on each chunk by a worker
+        // every worker is given a chunk and its index, which they pass to this handler
+        return [tokenizer, &ctx = *ctx_it++](auto chunk_idx, auto const &chunk_value) mutable {
+            auto range_of_findings = tokenizer(chunk_value);
             if (!range_of_findings.empty())
-                ctx.consume(line_idx, std::begin(line), std::move(range_of_findings));
+                ctx.consume(chunk_idx, std::begin(chunk_value), std::move(range_of_findings));
         };
     };
 
-    if (auto const res = detail::process_rr(line_reader, line_handler_gen, workers_count))
+    if (auto const res = detail::process_rr(std::forward<ChunkReader>(reader), chunk_handler_gen, workers_count))
         return res;
 
+    // erase all contextes with empty findings
+    boost::remove_erase_if(handlers_ctxs, [](auto const &ctx){ return ctx.empty(); });
+
     // print out the final results
-    auto all_lines_findings = handlers_ctxs | boost::adaptors::transformed([](auto const &ctx){ return ctx.lines_findings(); });
-    std::cout << boost::accumulate(all_lines_findings, 0, [](auto sum, auto const &item){ return sum + item.size(); }) << '\n';
+    std::cout << boost::accumulate(handlers_ctxs, 0, [](auto sum, auto const &item){ return sum + item.size(); }) << '\n';
 
-    using LinesFindingsIteratorRange = typename mtfind::detail::LinesFindings::const_iterator;
-    using LinesFindingsRange         = std::pair<LinesFindingsIteratorRange, LinesFindingsIteratorRange>;
-    using LinesFindingsRanges        = std::vector<LinesFindingsRange>;
-    LinesFindingsRanges result_ranges;
-    result_ranges.reserve(workers_count);
+    using ChunksFindingsIterator = typename ContextType::const_iterator;
+    using ChunksFindingsRange    = std::pair<ChunksFindingsIterator, ChunksFindingsIterator>;
+    using ChunksFindingsRanges   = std::vector<ChunksFindingsRange>;
+    ChunksFindingsRanges result_ranges;
+    result_ranges.reserve(handlers_ctxs.size());
 
-    boost::remove_erase_if(handlers_ctxs, [](auto const &ctx){ return ctx.lines_findings().empty(); });
     boost::transform(handlers_ctxs, std::back_inserter(result_ranges), [](auto const &ctx) {
-        return std::make_pair(ctx.lines_findings().begin(), ctx.lines_findings().end());
+        return std::make_pair(ctx.begin(), ctx.end());
     });
 
-    // send one by one findings to the sink in ascending order sorted by line index
-    // contexts's lines findings ranges given are sorted ascendingly themselves since RR strategy is used
+    // send one by one findings to the sink in ascending order sorted by chunk index
+    // contexts's chunks findings ranges given are sorted ascendingly themselves since RR strategy is used
     // the task is to behave like merge sort algorithm by finding out the minimal item
     // on each iteration
     while (!result_ranges.empty())
     {
-        // find a topleast item between the least items of all the contexts's lines findings
+        // find a topleast item between the least items of all the contexts's chunks findings
         auto range_it = boost::min_element(result_ranges, [](auto item, auto min){
-            return *(item.first) < *(min.first);
+            return (item.first)->first < (min.first)->first;
         });
 
-        line_findings_sink(*(range_it->first));
+        findings_sink(*(range_it->first));
 
         // advance the topleast item's iterator to the next
         ++(range_it->first);

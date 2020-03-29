@@ -3,15 +3,16 @@
 #include <iostream>
 #include <utility>
 #include <stdexcept>
+#include <iterator>
 
 #include <boost/algorithm/cxx11/all_of.hpp>
-#include <boost/utility/string_view.hpp>
-#include <boost/iostreams/device/mapped_file.hpp>
-
-#include <boost/range/algorithm/copy.hpp>
 #include <boost/function_output_iterator.hpp>
+#include <boost/iostreams/device/mapped_file.hpp>
+#include <boost/range/algorithm/copy.hpp>
+#include <boost/range/iterator_range.hpp>
+#include <boost/utility/string_view.hpp>
 
-#include "aux/char_range_chunk_reader.hpp"
+#include "aux/range_splitter.hpp"
 #include "searchers/searcher.hpp"
 #include "tokenizers/range_tokenizer.hpp"
 
@@ -22,7 +23,7 @@
 
 using namespace mtfind;
 
-constexpr bool kUseRR = false;
+constexpr bool kFileUseRR = false;
 
 ///
 /// @brief      main function, entry point to the program
@@ -31,13 +32,16 @@ constexpr bool kUseRR = false;
 /// @param      argv  The arguments array
 ///
 ///             argv[0] - name of the program
-///             argv[1] - the input file path
+///             argv[1] - input file path or '-' if stdin is used
 ///             argv[2] - input pattern to search against
 ///
 /// @return     result of the program, 0 when success, another value otherwise
 ///
 int main(int argc, char const *argv[]) try
 {
+    std::cout.sync_with_stdio(false);
+    std::cerr.sync_with_stdio(false);
+
     // printing the help page if no arguments given
     if (argc < 2)
     {
@@ -54,20 +58,12 @@ int main(int argc, char const *argv[]) try
     }
 
     // preserve a pattern string given in argv[2]
-    boost::string_view pattern(argv[2]);
+    boost::string_view const pattern(argv[2]);
     // check the pattern against correctness of its content
     if (!boost::algorithm::all_of(pattern, Application::instance().pattern_validator()))
     {
         std::cerr << "error: pattern has incorrect format\n";
         Application::instance().help();
-        return 1;
-    }
-
-    // open an input file with its path given in argv[1] by means of mapping, opening in readonly mode
-    boost::iostreams::mapped_file_source source_file(argv[1]);
-    if (!source_file)
-    {
-        std::cerr << "error: couldn't open an input file '" << argv[1] << "'\n";
         return 1;
     }
 
@@ -81,19 +77,32 @@ int main(int argc, char const *argv[]) try
 
     // construct a searcher based on the pattern and the comparator dedicated to comparing
     // symbols from the pattern and the source file
-    using PatternSearcher = Searcher<decltype(Application::instance().pattern_comparator())>;
+    using PatternSearcher = Searcher<decltype(pattern), decltype(Application::instance().pattern_comparator())>;
     // construct a tokenizer based on the searcher finding subranges
     using Tokenizer = RangeTokenizer<PatternSearcher>;
     Tokenizer tokenizer(PatternSearcher(pattern, Application::instance().pattern_comparator()));
 
-    if (kUseRR)
+    boost::string_view const input(argv[1]);
+    if (bool const use_stdin = input == "-")
     {
-        detail::CharRangeChunkReader<decltype(source_file.begin())> line_reader(source_file.begin(), source_file.end());
+        std::cin.sync_with_stdio(false);
+        std::cin >> std::noskipws;
+        detail::RangeSplitter<std::istream_iterator<char>> line_reader(std::istream_iterator<char>(std::cin), std::istream_iterator<char>());
         return strat::round_robin(line_reader, tokenizer, line_findings_sink);
     }
     else
     {
-        return strat::divide_and_conquer(source_file, tokenizer, line_findings_sink);
+        // open an input file with its path given in argv[1] by means of mapping, opening in readonly mode
+        boost::iostreams::mapped_file_source const source(input.data());
+        if (!source)
+        {
+            std::cerr << "error: couldn't open an input file '" << input << "'\n";
+            return 1;
+        }
+
+        return kFileUseRR
+            ? strat::round_robin(detail::RangeSplitter<decltype(source.begin())>(source), tokenizer, line_findings_sink)
+            : strat::divide_and_conquer(source, tokenizer, line_findings_sink);
     }
 }
 catch (std::exception const &ex)

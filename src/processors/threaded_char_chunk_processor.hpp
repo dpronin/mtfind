@@ -12,11 +12,11 @@
 namespace mtfind
 {
 
-template<typename Handler>
+template<typename Handler, typename Chunk, size_t kQueueCapacity = 32768>
 class ThreadedCharChunkProcessor
 {
 public:
-    explicit ThreadedCharChunkProcessor(Handler chunk_handler) : chunk_handler_(std::move(chunk_handler))
+    explicit ThreadedCharChunkProcessor(Handler handler) : handler_(std::move(handler))
     {}
 
     ~ThreadedCharChunkProcessor() = default;
@@ -27,9 +27,10 @@ public:
     ThreadedCharChunkProcessor(ThreadedCharChunkProcessor&&)            = delete;
     ThreadedCharChunkProcessor& operator=(ThreadedCharChunkProcessor&&) = delete;
 
-    void operator()(size_t chunk_idx, boost::string_view chunk_view)
+    template<typename U = Chunk>
+    void operator()(U &&chunk)
     {
-        while (!queue_.push({chunk_idx, chunk_view}))
+        while (!queue_.push(std::forward<U>(chunk)))
             ;
     }
 
@@ -38,16 +39,16 @@ public:
         if (!stop_token_)
         {
             worker_ = std::async(std::launch::async, [this]{
-                typename decltype(queue_)::value_type chunk;
+                Chunk chunk;
 
                 while (!stop_token_)
                 {
                     if (queue_.pop(chunk))
-                        chunk_handler_(chunk.idx, chunk.view);
+                        handler_(std::move(chunk));
                 }
 
                 while (queue_.pop(chunk))
-                    chunk_handler_(chunk.idx, chunk.view);
+                    handler_(std::move(chunk));
             });
         }
     }
@@ -63,20 +64,11 @@ public:
     }
 
 private:
-    struct Chunk
-    {
-        size_t             idx;
-        boost::string_view view;
-    };
+    Handler                                                                       handler_;
 
-private:
-    static constexpr size_t kQCapacity = 32768;
-
-    Handler                                                                   chunk_handler_;
-
-    std::atomic_bool                                                          stop_token_{false};
-    boost::lockfree::spsc_queue<Chunk, boost::lockfree::capacity<kQCapacity>> queue_;
-    std::future<void>                                                         worker_;
+    std::atomic_bool                                                              stop_token_{false};
+    boost::lockfree::spsc_queue<Chunk, boost::lockfree::capacity<kQueueCapacity>> queue_;
+    std::future<void>                                                             worker_;
 };
 
 } // namespace mtfind

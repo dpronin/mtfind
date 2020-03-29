@@ -9,9 +9,9 @@ set(HEADERS
     application.hpp
     strat/round_robin.hpp
     strat/divide_and_conquer.hpp
-    aux/line.hpp
-    aux/char_range_chunk_reader.hpp
-    aux/line_handler_ctx.hpp
+    aux/chunk.hpp
+    aux/range_splitter.hpp
+    aux/chunk_handler_ctx.hpp
     aux/iterator_concept.hpp
     searchers/searcher.hpp
     tokenizers/range_tokenizer.hpp

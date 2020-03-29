@@ -6,10 +6,10 @@ set(SOURCES
 )
 
 set(HEADERS
-    ${MTFIND_SRC_DIR}/aux/char_range_chunk_reader.hpp
+    ${MTFIND_SRC_DIR}/aux/range_splitter.hpp
     ${MTFIND_SRC_DIR}/aux/iterator_concept.hpp
-    ${MTFIND_SRC_DIR}/aux/line.hpp
-    ${MTFIND_SRC_DIR}/aux/line_handler_ctx.hpp
+    ${MTFIND_SRC_DIR}/aux/chunk.hpp
+    ${MTFIND_SRC_DIR}/aux/chunk_handler_ctx.hpp
     ${MTFIND_SRC_DIR}/tokenizers/range_tokenizer.hpp
     ${MTFIND_SRC_DIR}/processors/multithreaded_task_processor.hpp
     ${MTFIND_SRC_DIR}/processors/threaded_char_chunk_processor.hpp

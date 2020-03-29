@@ -3,30 +3,31 @@
 #include <algorithm>
 
 #include <utility>
-#include <type_traits>
+#include <iterator>
 
-#include <boost/utility/string_view.hpp>
+#include <boost/range/iterator_range.hpp>
 
 namespace mtfind
 {
 
 ///
 /// @brief      Searcher class that uses a pattern and a comparator given
-///             to search a substring in the input string-like range
+///             to search a subrange in an input range
 ///
+/// @tparam     Pattern
 /// @tparam     Comparator
 ///
-template<typename Comparator = void>
+template<typename Pattern, typename Comparator = void>
 class Searcher
 {
 public:
     ///
-    /// @brief      Constructs the searcher based on the pattern and a comparator given
+    /// @brief      Constructs the searcher based on the pattern and the comparator given
     ///
     /// @param[in]  pattern  The pattern that input ranges will be compared with
     /// @param[in]  comp     The comparator
     ///
-    explicit Searcher(boost::string_view pattern, Comparator comp = Comparator()) noexcept : pattern_(pattern), comp_(std::move(comp))
+    explicit Searcher(Pattern pattern, Comparator comp = Comparator()) noexcept : pattern_(pattern), comp_(std::move(comp))
     {}
 
     ///
@@ -37,40 +38,39 @@ public:
     ///
     /// @tparam     Iterator
     ///
-    /// @return     A pair of iterators specifying the range that meets the pattern
-    ///             Comparison is performed with the comparator
+    /// @return     A range of input's iterators that meets the pattern
     ///
     template<typename Iterator>
     auto operator()(Iterator first, Iterator last) const noexcept
     {
-        std::pair<Iterator, Iterator> match;
-        match.first  = std::search(first, last, pattern_.begin(), pattern_.end(), comp_);
-        match.second = last != match.first ? std::next(match.first, pattern_.size()) : last;
-        return match;
+        first = std::search(first, last, pattern_.begin(), pattern_.end(), comp_);
+        return boost::make_iterator_range(first, last != first ? std::next(first, pattern_.size()) : last);
     }
 
     ///
     /// @brief      Matches the input string against the pattern
     ///
-    /// @param[in]  input   The string
+    /// @param[in]  input   Input range to explore
     ///
-    /// @return     The result of the function call
+    /// @tparam     Range
     ///
-    auto operator()(boost::string_view input) const noexcept { return (*this)(input.begin(), input.end()); }
+    /// @return     A subrange that meets the pattern
+    ///
+    template<typename Range>
+    auto operator()(Range const &input) const noexcept { return (*this)(std::begin(input), std::end(input)); }
 
 private:
-    boost::string_view pattern_;
-    Comparator         comp_;
+    Pattern    pattern_;
+    Comparator comp_;
 };
 
 ///
-/// @brief      Searcher class that uses a pattern given
-///             to search a substring in the input string-like range
+/// @brief      Searcher class that uses a pattern given to search a subrange in an input range
 ///
-/// @tparam     Comparator
+/// @tparam     Pattern
 ///
-template<>
-class Searcher<void>
+template<typename Pattern>
+class Searcher<Pattern, void>
 {
 public:
     ///
@@ -78,7 +78,7 @@ public:
     ///
     /// @param[in]  pattern  The pattern
     ///
-    explicit Searcher(boost::string_view pattern) noexcept : pattern_(pattern)
+    explicit Searcher(Pattern pattern) noexcept : pattern_(pattern)
     {}
 
     ///
@@ -89,28 +89,29 @@ public:
     ///
     /// @tparam     Iterator
     ///
-    /// @return     A pair of iterators specifying the range that meets the pattern
+    /// @return     A range of input's iterators that meets the pattern
     ///
     template<typename Iterator>
     auto operator()(Iterator first, Iterator last) const noexcept
     {
-        std::pair<Iterator, Iterator> match;
-        match.first  = std::search(first, last, pattern_.begin(), pattern_.end());
-        match.second = last == match.first ? last : std::next(match.first, pattern_.size());
-        return match;
+        first = std::search(first, last, pattern_.begin(), pattern_.end());
+        return boost::make_iterator_range(first, last != first ? std::next(first, pattern_.size()) : last);
     }
 
     ///
     /// @brief      Matches the input string against the pattern
     ///
-    /// @param[in]  input   The string
+    /// @param[in]  input   Input range to explore
     ///
-    /// @return     The result of the function call
+    /// @tparam     Range
     ///
-    auto operator()(boost::string_view input) const noexcept { return (*this)(input.begin(), input.end()); }
+    /// @return     A subrange that meets the pattern
+    ///
+    template<typename Range>
+    auto operator()(Range const &input) const noexcept { return (*this)(std::begin(input), std::end(input)); }
 
 private:
-    boost::string_view pattern_;
+    Pattern pattern_;
 };
 
 } // namespace mtfind

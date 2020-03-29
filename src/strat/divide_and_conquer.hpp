@@ -12,11 +12,12 @@
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/range/numeric.hpp>
 #include <boost/range/adaptor/transformed.hpp>
+#include <boost/utility/string_view.hpp>
 
 #include "processors/multithreaded_task_processor.hpp"
 
-#include "aux/char_range_chunk_reader.hpp"
-#include "aux/line_handler_ctx.hpp"
+#include "aux/range_splitter.hpp"
+#include "aux/chunk_handler_ctx.hpp"
 #include "aux/iterator_concept.hpp"
 
 namespace mtfind::strat
@@ -25,27 +26,28 @@ namespace mtfind::strat
 namespace detail
 {
 
-template<typename Iterator, typename Generator, typename = mtfind::detail::is_random_access_char_iterator<Iterator>>
-auto generate_line_handlers_tasks(Iterator start, Iterator end, size_t tasks_number, Generator handler_gen, bool process_empty_lines = false)
+template<typename Iterator,
+typename HandlerGenerator,
+typename Task = std::function<void()>,
+typename = typename std::enable_if<mtfind::detail::is_random_access_char_iterator<Iterator>>::type>
+auto generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_number, HandlerGenerator handler_generator, bool process_empty_chunk = false)
 {
-    using Task = std::function<void()>;
-
     std::vector<Task> tasks;
 
     if (0 == tasks_number)
         return tasks;
 
-    std::function<Task(Iterator, Iterator, decltype(handler_gen()))> task_generator;
+    std::function<Task(Iterator, Iterator, decltype(handler_generator()))> task_generator;
 
-    if (process_empty_lines)
+    if (process_empty_chunk)
     {
         task_generator = [] (auto first, auto last, auto handler) {
             return [=] () mutable {
-                mtfind::detail::CharRangeChunkReader<Iterator> line_reader(first, last);
-                size_t line_idx = 1;
-                // process the input file line by line
-                for (auto line = line_reader(); line_reader; ++line_idx, line = line_reader())
-                    handler(line_idx, line);
+                mtfind::detail::RangeSplitter<Iterator> chunk_reader(first, last);
+                size_t chunk_idx = 0;
+                // process the input file chunk by chunk
+                for (auto chunk = chunk_reader(); chunk_reader; ++chunk_idx, chunk = chunk_reader())
+                    handler(chunk_idx, chunk);
             };
         };
     }
@@ -53,24 +55,24 @@ auto generate_line_handlers_tasks(Iterator start, Iterator end, size_t tasks_num
     {
         task_generator = [] (auto first, auto last, auto handler) {
             return [=] () mutable {
-                mtfind::detail::CharRangeChunkReader<Iterator> line_reader(first, last);
-                size_t line_idx = 1;
-                // process the input file line by line
-                for (auto line = line_reader(); line_reader; ++line_idx, line = line_reader())
+                mtfind::detail::RangeSplitter<Iterator> chunk_reader(first, last);
+                size_t chunk_idx = 0;
+                // process the input file chunk by chunk
+                for (auto chunk = chunk_reader(); chunk_reader; ++chunk_idx, chunk = chunk_reader())
                 {
-                    if (!line.empty())
-                        handler(line_idx, line);
+                    if (!chunk.empty())
+                        handler(chunk_idx, chunk);
                 };
             };
         };
     }
 
-    // all the next lines are dedicated to fairly dividing the region among tasks
+    // all the next chunks are dedicated to fairly dividing the region among tasks
     auto data_chunk_size = std::distance(start, end) / tasks_number;
     if (0 == data_chunk_size)
         data_chunk_size = 1;
 
-    // a helper for searching for a nearest new line symbol
+    // a helper for searching for a nearest new chunk symbol
     auto find_next_nl = [=](auto first){
         return std::find(std::next(first, std::min(data_chunk_size, static_cast<size_t>(std::distance(first, end)))), end, '\n');
     };
@@ -82,7 +84,7 @@ auto generate_line_handlers_tasks(Iterator start, Iterator end, size_t tasks_num
         while (end != last && *last == '\n')
             ++last;
         // generate a task for the piece of the region
-        tasks.push_back(task_generator(first, last, handler_gen()));
+        tasks.push_back(task_generator(first, last, handler_generator()));
         first = last;
     }
 
@@ -92,57 +94,69 @@ auto generate_line_handlers_tasks(Iterator start, Iterator end, size_t tasks_num
 } // namespace detail
 
 ///
-/// @brief      Process and parse with a parser each line of the region provided by a range
-///             All the findings will be provided via a sink callback in line index ascending order
+/// @brief      Process and parse with a tokenizer each chunk of the region provided by a range
+///             All the findings will be provided via a sink callback in chunk index ascending order
 ///             Strategy Divide-and-conquer is used
 ///
 /// @details    Divide-and-conquer approach is about dividing the region into equal-length
 ///             subregions and pass each of them in a separate worker thread, no synchronization
 ///             is required
 ///
-/// @param[in]  first               RAI to the first character of the region
-/// @param[in]  last                RAI to the past the last character of the region
-/// @param[in]  parser              The parser being called on each line
-/// @param[in]  line_findings_sink  The sink for line findings
-/// @param[in]  workers_count       The number of threads to be used
+/// @param[in]  first                RAI to the first character of the region
+/// @param[in]  last                 RAI to the past the last character of the region
+/// @param[in]  tokenizer            The tokenizer being called on each chunk
+/// @param[in]  chunk_findings_sink  The sink for chunk findings
+/// @param[in]  workers_count        The number of threads to be used
 ///
-/// @tparam     Iterator            RAI character iterator
-/// @tparam     Parser              A Functor like parser for a line
-/// @tparam     LineFindingsSink    A Functor-like sink type
+/// @tparam     Iterator             RAI character iterator
+/// @tparam     RangeTokenizer       A Functor like tokenizer for a chunk
+/// @tparam     ChunkFindingsSink    A Functor-like sink type
 ///
 /// @return     0 in case of success, any other value otherwise
 ///
-template<typename Iterator, typename Parser, typename LineFindingsSink>
-typename std::enable_if<mtfind::detail::is_random_access_char_iterator<Iterator>::value, int>::type
-divide_and_conquer(Iterator first, Iterator last, Parser parser, LineFindingsSink &&line_findings_sink, size_t workers_count = std::thread::hardware_concurrency())
+template<typename Iterator,
+typename RangeTokenizer,
+typename ChunkFindingsSink>
+typename std::enable_if<mtfind::detail::is_random_access_char_iterator<Iterator>, int>::type
+divide_and_conquer(Iterator first, Iterator last, RangeTokenizer tokenizer, ChunkFindingsSink &&findings_sink, size_t workers_count = std::thread::hardware_concurrency())
 {
     if (0 == workers_count)
         workers_count = 1;
 
-    struct HandlerCtx : mtfind::detail::LineHandlerCtx { size_t last_line_idx = 0; };
-    std::vector<HandlerCtx> handlers_ctxs(workers_count);
+    class HandlerCtx : public mtfind::detail::ChunkHandlerCtx<boost::string_view>
+    {
+    public:
+        void set_last_chunk_idx(size_t chunk_idx) noexcept { last_chunk_idx_ = chunk_idx + 1; }
+        size_t last_chunk_idx() const noexcept { return last_chunk_idx_; }
 
-    // generators of handlers of the file's lines being read
-    auto line_handler_generator = [parser, ctx_it = handlers_ctxs.begin()] () mutable {
-        // the handler will be called on each line by a worker
-        // every worker starts handling lines from the line index 1 (see above)
-        // to learn what the index has been last we preserve the 'last_line_idx'
-        // in order to restore real line indices in the file afterward
-        return [parser, &ctx = *ctx_it++](auto line_idx, auto const &line) mutable {
-            if (!line.empty())
+    private:
+        size_t last_chunk_idx_ = 0;
+    };
+
+    using ContextType = HandlerCtx;
+    std::vector<ContextType> handlers_ctxs(workers_count);
+
+    // generators of handlers of the file's chunks being read
+    auto chunk_handler_generator = [tokenizer, ctx_it = handlers_ctxs.begin()] () mutable {
+        // the handler will be called on each chunk by a worker
+        // every worker starts handling chunks from the chunk index 1 (see above)
+        // to learn what the index has been last we preserve the 'last_chunk_idx'
+        // in order to restore real chunk indices in the file afterward
+        return [tokenizer, &ctx = *ctx_it++](auto chunk_idx, auto const &chunk_value) mutable {
+            if (!chunk_value.empty())
             {
-                auto range_of_findings = parser(std::forward<decltype(line)>(line));
+                auto range_of_findings = tokenizer(chunk_value);
                 if (!range_of_findings.empty())
-                    ctx.consume(line_idx, std::begin(line), std::move(range_of_findings));
+                    ctx.consume(chunk_idx, std::begin(chunk_value), std::move(range_of_findings));
             }
-            ctx.last_line_idx = line_idx;
+            ctx.set_last_chunk_idx(chunk_idx);
         };
     };
 
     MultithreadedTaskProcessor task_processor(workers_count);
 
     // generate tasks responsible for processing different equal-length regions of the underlying range
-    auto tasks = detail::generate_line_handlers_tasks(first, last, task_processor.workers_count(), line_handler_generator, true);
+    auto tasks = detail::generate_chunk_handlers_tasks(first, last, task_processor.workers_count(), chunk_handler_generator, true);
 
     // run the task processor up
     task_processor.run();
@@ -153,55 +167,55 @@ divide_and_conquer(Iterator first, Iterator last, Parser parser, LineFindingsSin
     task_processor.wait();
 
     // print out the final results
-    auto all_lines_findings = handlers_ctxs | boost::adaptors::transformed([](auto const &ctx){ return ctx.lines_findings(); });
-    std::cout << boost::accumulate(all_lines_findings, 0, [](auto sum, auto const &item){ return sum + item.size(); }) << '\n';
+    auto all_chunks_findings = handlers_ctxs | boost::adaptors::transformed([](auto const &ctx){ return ctx.chunks_findings(); });
+    std::cout << boost::accumulate(all_chunks_findings, 0, [](auto sum, auto const &item){ return sum + item.size(); }) << '\n';
 
-    // line offset is necessary for adjusting line indices given by every worker
-    // that has started from line index 1
-    // to recover true line numbers from the file we need to take into account
-    // the last line processed by every worker
-    size_t line_offset = 0;
+    // chunk offset is necessary for adjusting chunk indices given by every worker
+    // that has started from chunk index 1
+    // to recover true chunk numbers from the file we need to take into account
+    // the last chunk processed by every worker
+    size_t chunk_offset = 0;
     for (auto &ctx : handlers_ctxs)
     {
-        for (auto &line_findings : ctx.lines_findings())
+        for (auto &chunk_findings : ctx)
         {
-            // recovering real line numbers
-            line_findings.first += line_offset;
-            line_findings_sink(std::move(line_findings));
+            // recovering real chunk numbers
+            chunk_findings.first += chunk_offset;
+            findings_sink(std::move(chunk_findings));
         }
-        // adding last line index processed by current worker
-        // in order to recover real line numbers that the next worker
+        // adding last chunk index processed by current worker
+        // in order to recover real chunk numbers that the next worker
         // has processed
-        line_offset += ctx.last_line_idx;
+        chunk_offset += ctx.last_chunk_idx();
     }
 
     return 0;
 }
 
 ///
-/// @brief      Process and parse with a parser each line of the region provided by a range
-///             All the findings will be provided via a sink callback in line index ascending order
+/// @brief      Process and parse with a tokenizer each chunk of the region provided by a range
+///             All the findings will be provided via a sink callback in chunk index ascending order
 ///             Strategy Divide-and-conquer is used
 ///
 /// @details    Divide-and-conquer approach is about dividing the region into equal-length
 ///             subregions and pass each of them in a separate worker thread, no synchronization
 ///             is required
 ///
-/// @param[in]  source_range        Range of characters given
-/// @param[in]  parser              The parser being called on each line
-/// @param[in]  line_findings_sink  The sink for line findings
-/// @param[in]  workers_count       The number of threads to be used
+/// @param[in]  source_range   Range of characters given
+/// @param[in]  tokenizer      The tokenizer being called on each chunk
+/// @param[in]  findings_sink  The sink for chunk findings
+/// @param[in]  workers_count  The number of threads to be used
 ///
-/// @tparam     Range               Range of charachters
-/// @tparam     Parser              A Functor like parser for a line
-/// @tparam     LineFindingsSink    A Functor-like sink type
+/// @tparam     Range               Range of characters
+/// @tparam     RangeTokenizer      A Functor like tokenizer for a chunk
+/// @tparam     ChunkFindingsSink   A Functor-like sink type
 ///
 /// @return     0 in case of success, any other value otherwise
 ///
-template<typename Range, typename Parser, typename LineFindingsSink>
-decltype(auto) divide_and_conquer(Range const &source_range, Parser parser, LineFindingsSink &&line_findings_sink, size_t workers = std::thread::hardware_concurrency())
+template<typename Range, typename RangeTokenizer, typename ChunkFindingsSink>
+decltype(auto) divide_and_conquer(Range const &source_range, RangeTokenizer tokenizer, ChunkFindingsSink &&findings_sink, size_t workers_count = std::thread::hardware_concurrency())
 {
-    return divide_and_conquer(source_range.begin(), source_range.end(), parser, std::forward<LineFindingsSink>(line_findings_sink), workers);
+    return divide_and_conquer(std::begin(source_range), std::end(source_range), tokenizer, std::forward<ChunkFindingsSink>(findings_sink), workers_count);
 }
 
 } // namespace mtfind

@@ -4,12 +4,12 @@
 #include <tuple>
 #include <vector>
 
-#include <boost/range/iterator_range.hpp>
-
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include "aux/char_range_chunk_reader.hpp"
+#include <boost/range/iterator_range.hpp>
+
+#include "aux/range_splitter.hpp"
 #include "searchers/searcher.hpp"
 #include "tokenizers/range_tokenizer.hpp"
 
@@ -19,30 +19,30 @@ using namespace testing;
 namespace
 {
 
-TEST(CharRangeChunkReader, SplitsStringInLines)
+TEST(RangeSplitter, SplitsStringInLines)
 {
     std::string const text = "line1\nline2\n\nline4\r\nline5\n";
     std::vector<std::string> const expected_lines = { "line1", "line2", "", "line4\r", "line5" };
 
-    detail::CharRangeChunkReader<std::string::const_iterator> reader(text);
+    detail::RangeSplitter<std::string::const_iterator> reader(text);
 
     std::vector<std::string> result_lines;
     for (auto line = reader(); reader; line = reader())
-        result_lines.push_back({line.cbegin(), line.cend()});
+        result_lines.push_back({line.begin(), line.end()});
 
     EXPECT_EQ(expected_lines, result_lines);
 }
 
-TEST(CharRangeChunkReader, SplitsStringAtWhitespaces)
+TEST(RangeSplitter, SplitsStringAtWhitespaces)
 {
     std::string const text = "Hello, my lo\tvely wor\nld!";
     std::vector<std::string> const expected_words = { "Hello,", "my", "lo\tvely", "wor\nld!" };
 
-    detail::CharRangeChunkReader<std::string::const_iterator> reader(text, ' ');
+    detail::RangeSplitter<std::string::const_iterator> reader(text, ' ');
 
     std::vector<std::string> result_words;
     for (auto word = reader(); reader; word = reader())
-        result_words.push_back({word.cbegin(), word.cend()});
+        result_words.push_back({word.begin(), word.end()});
 
     EXPECT_EQ(expected_words, result_words);
 }
@@ -61,11 +61,10 @@ TEST(Searcher, SuccessfulPatternLookupNoComparator)
     {
         auto const &text = std::get<0>(record);
         auto const &pattern = std::get<1>(record);
-        Searcher<> searcher(pattern);
-        auto const match = searcher(text.cbegin(), text.cend());
-        auto const match_range = boost::make_iterator_range(match.first, match.second);
-        EXPECT_THAT(match_range, ElementsAreArray(pattern));
-        EXPECT_EQ(std::distance(text.cbegin(), match_range.begin()), std::get<2>(record));
+        Searcher<decltype(pattern)> searcher(pattern);
+        auto const token = searcher(text.cbegin(), text.cend());
+        EXPECT_THAT(token, ElementsAreArray(pattern));
+        EXPECT_EQ(std::distance(text.cbegin(), token.begin()), std::get<2>(record));
     }
 }
 
@@ -83,10 +82,10 @@ TEST(Searcher, FailedPatternLookupNoComparator)
     {
         auto const &text = std::get<0>(record);
         auto const &pattern = std::get<1>(record);
-        Searcher<> searcher(pattern);
-        auto const match = searcher(text.cbegin(), text.cend());
-        EXPECT_EQ(match.first, match.second);
-        EXPECT_EQ(match.first, text.cend());
+        Searcher<decltype(pattern)> searcher(pattern);
+        auto const token = searcher(text.cbegin(), text.cend());
+        EXPECT_TRUE(token.empty());
+        EXPECT_EQ(token.begin(), text.cend());
     }
 }
 
@@ -99,9 +98,9 @@ TEST(Searcher, SuccessfulPatternLookupWithComparator)
         [](auto c, auto p){ return ('&' == p && ('u' - c) == 1) || p == c; },     // an arbitrary pattern comparator
     };
 
-    using match_pos_t = std::pair<std::string, size_t>;
+    using token_pos_t = std::pair<std::string, size_t>;
 
-    std::vector<std::tuple<std::string, std::string, comparator_t, std::vector<match_pos_t>>> const records =
+    std::vector<std::tuple<std::string, std::string, comparator_t, std::vector<token_pos_t>>> const records =
     {
         /*          input text          */ /* pattern to look up */ /* comparator */  /*        findings and their start positions      */
         { "Look up a pattern in this text", "a??",                   comparators[0],   { { "a p",   8 }, { "att", 11 }                } },
@@ -113,19 +112,19 @@ TEST(Searcher, SuccessfulPatternLookupWithComparator)
     {
         auto const &text = std::get<0>(record);
         auto const &pattern = std::get<1>(record);
-        Searcher<comparator_t> searcher(pattern, std::get<2>(record));
-        auto const &exp_match_pos_array = std::get<3>(record);
-        auto exp_match_pos = exp_match_pos_array.cbegin();
-        auto match = searcher(text.cbegin(), text.cend());
-        for (; text.cend() != match.first && exp_match_pos_array.cend() != exp_match_pos;
-             ++exp_match_pos, match = searcher(match.second, text.cend()))
+        Searcher<decltype(pattern), comparator_t> searcher(pattern, std::get<2>(record));
+        auto const &exp_token_pos_array = std::get<3>(record);
+        auto exp_token_pos = exp_token_pos_array.cbegin();
+        auto token = searcher(text);
+        for (; text.cend() != token.begin() && exp_token_pos_array.cend() != exp_token_pos;
+             ++exp_token_pos, token = searcher(token.end(), text.cend()))
         {
-            auto const match_range = boost::make_iterator_range(match.first, match.second);
-            ASSERT_THAT(match_range, ElementsAreArray(exp_match_pos->first));
-            ASSERT_EQ(std::distance(text.cbegin(), match_range.begin()), exp_match_pos->second);
+            ASSERT_THAT(token, ElementsAreArray(exp_token_pos->first));
+            ASSERT_EQ(std::distance(text.cbegin(), token.begin()), exp_token_pos->second);
         }
-        EXPECT_EQ(exp_match_pos, exp_match_pos_array.cend());
-        EXPECT_EQ(match.first, text.cend());
+        EXPECT_EQ(exp_token_pos, exp_token_pos_array.cend());
+        EXPECT_TRUE(token.empty());
+        EXPECT_EQ(token.begin(), text.cend());
     }
 }
 
@@ -137,8 +136,6 @@ TEST(Searcher, FailedPatternLookupWithComparator)
         [](auto c, auto p){ return 'A' <= c && c <= 'Z' && 'a' <= p && p <= 'z'; }, // an arbitrary pattern comparator
         [](auto c, auto p){ return 'u' == p && 'u' != c; },                         // an arbitrary pattern comparator
     };
-
-    using match_pos_t = std::pair<std::string, size_t>;
 
     std::vector<std::tuple<std::string, std::string, comparator_t>> const records =
     {
@@ -152,10 +149,10 @@ TEST(Searcher, FailedPatternLookupWithComparator)
     {
         auto const &text = std::get<0>(record);
         auto const &pattern = std::get<1>(record);
-        Searcher<comparator_t> searcher(pattern, std::get<2>(record));
-        auto match = searcher(text.cbegin(), text.cend());
-        EXPECT_EQ(match.first, match.second);
-        EXPECT_EQ(match.first, text.cend());
+        Searcher<decltype(pattern), comparator_t> searcher(pattern, std::get<2>(record));
+        auto const token = searcher(text);
+        EXPECT_TRUE(token.empty());
+        EXPECT_EQ(token.begin(), text.cend());
     }
 }
 
@@ -165,7 +162,7 @@ namespace
 struct SearcherMock
 {
     using iterator = std::string::const_iterator;
-    using token_t  = std::pair<iterator, iterator>;
+    using token_t  = boost::iterator_range<iterator>;
 
     MOCK_METHOD2(search, token_t(iterator, iterator));
 
@@ -206,9 +203,8 @@ TEST(RangeTokenizer, Tokenizes)
     auto token_exp = exp_tokens.cbegin();
     for (auto token = tokens.cbegin(); token != tokens.cend(); ++token, ++token_exp)
     {
-        auto const token_range = boost::make_iterator_range(token->first, token->second);
-        EXPECT_THAT(token_range, ElementsAreArray(token_exp->first));
-        EXPECT_EQ(std::distance(text.cbegin(), token_range.begin()), token_exp->second);
+        EXPECT_THAT(*token, ElementsAreArray(token_exp->first));
+        EXPECT_EQ(std::distance(text.cbegin(), token->begin()), token_exp->second);
     }
 }
 

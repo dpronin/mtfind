@@ -3,9 +3,10 @@
 #include <cstddef>
 
 #include <vector>
-#include <tuple>
 #include <utility>
 #include <iterator>
+
+#include <boost/range/iterator_range.hpp>
 
 namespace mtfind
 {
@@ -31,18 +32,20 @@ public:
     ///
     /// @tparam     Iterator
     ///
-    /// @return     Array of decoupled source's peaces those the searcher has fired for
+    /// @return     An array of decoupled source's peaces those the searcher has fired for
     ///
     template<typename Iterator>
     auto operator()(Iterator first, Iterator last)
     {
-        std::vector<std::pair<Iterator, Iterator>> res;
+        std::vector<boost::iterator_range<Iterator>> res;
 
-        for (Iterator match_start = first, match_end; match_start != last; match_start = match_end)
+        while (first != last)
         {
-            std::tie(match_start, match_end) = searcher_(match_start, last);
-            if (match_start != match_end)
-                res.push_back({match_start, match_end});
+            auto token = searcher_(first, last);
+            if (token.empty())
+                break;
+            first = token.end();
+            res.push_back(std::move(token));
         }
 
         return res;
@@ -55,7 +58,8 @@ public:
     ///
     /// @tparam     Range
     ///
-    /// @return     An array of pairs of start positions and findings themselves
+    /// @return     An array of decoupled source's peaces those the searcher has fired for
+    ///
     template <typename Range>
     auto operator()(Range const &range) { return (*this)(std::begin(range), std::end(range)); }
 
