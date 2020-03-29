@@ -12,6 +12,10 @@ set(CMAKE_CXX_STANDARD 14)
 
 set(MTFIND_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/src)
 
+if (${CMAKE_BUILD_TYPE} MATCHES Debug)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg -ggdb")
+endif()
+
 add_subdirectory(src)
 
 if (ENABLE_TEST)
