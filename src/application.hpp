@@ -25,10 +25,10 @@ public:
     void help() noexcept
     {
         std::cout << R"help(
-usage: mtfind INPUT_FILE MASK
+usage: mtfind INPUT MASK
 
-    INPUT_FILE - an input file to process
-    MASK       - a pattern to seek words matching it
+    INPUT - an input file to process or stdin if '-' is specified
+    MASK  - a pattern to seek words matching it
 
     A pattern should meet the following format (the rule is represented in EBNF):
         MASK = ASCII 7-bit symbol | ?, { ASCII 7-bit symbol | ? }
@@ -48,6 +48,9 @@ examples:
 
     > mtfild input.txt "wor:d"
         Will find words "wor:d" in input.txt. Colon symbol is as normal as letters and digits to search for matching
+
+    > cat input.txt | mtfind - "wor:d"
+        Will do the same as the previous example except that stdin is used, that is tied to stdout of 'cat' by pipelining
     )help""\n";
     }
 

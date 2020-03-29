@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <cstdlib>
 
 #include <iostream>
 #include <utility>
@@ -9,7 +10,6 @@
 #include <boost/function_output_iterator.hpp>
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/range/algorithm/copy.hpp>
-#include <boost/range/iterator_range.hpp>
 #include <boost/utility/string_view.hpp>
 
 #include "aux/range_splitter.hpp"
@@ -39,6 +39,9 @@ constexpr bool kFileUseRR = false;
 ///
 int main(int argc, char const *argv[]) try
 {
+    // synchronization with printf-like function is disabled
+    // since no printf-like functions are used in the application
+    // as the result it could slightly increase performance
     std::cout.sync_with_stdio(false);
     std::cerr.sync_with_stdio(false);
 
@@ -46,7 +49,7 @@ int main(int argc, char const *argv[]) try
     if (argc < 2)
     {
         Application::instance().help();
-        return 0;
+        return EXIT_SUCCESS;
     }
 
     // there must be at most 2 meaningful arguments to the program, read the help page
@@ -54,7 +57,7 @@ int main(int argc, char const *argv[]) try
     {
         std::cerr << "error: invalid number of parameters\n";
         Application::instance().help();
-        return 1;
+        return EXIT_FAILURE;
     }
 
     // preserve a pattern string given in argv[2]
@@ -64,7 +67,7 @@ int main(int argc, char const *argv[]) try
     {
         std::cerr << "error: pattern has incorrect format\n";
         Application::instance().help();
-        return 1;
+        return EXIT_FAILURE;
     }
 
     // the function printing out the findings for a line
@@ -75,44 +78,55 @@ int main(int argc, char const *argv[]) try
         boost::copy(line_findings.second, boost::make_function_output_iterator(item_outputter));
     };
 
-    // construct a searcher based on the pattern and the comparator dedicated to comparing
+    auto pattern_comparator = Application::instance().pattern_comparator();
+    // define a searcher type based on the pattern and the comparator dedicated to comparing
     // symbols from the pattern and the source file
-    using PatternSearcher = Searcher<decltype(pattern), decltype(Application::instance().pattern_comparator())>;
-    // construct a tokenizer based on the searcher finding subranges
+    using PatternSearcher = Searcher<decltype(pattern), decltype(pattern_comparator)>;
+    // define and construct a tokenizer based on the searcher finding subranges
+    // those will be extracted using the searcher constructed and based on the PatternSearcher type
     using Tokenizer = RangeTokenizer<PatternSearcher>;
     Tokenizer tokenizer(PatternSearcher(pattern, Application::instance().pattern_comparator()));
 
-    boost::string_view const input(argv[1]);
-    if (bool const use_stdin = input == "-")
+    auto use_stdin = [](auto &&input_path){ return input_path == "-"; };
+
+    // input may be stdin specified as '-' or a path to the file
+    boost::string_view const input_path(argv[1]);
+    if (use_stdin(input_path))
     {
+        // synchronization cin with scanf-like functions is disabled
+        // it can be done since no scanf-like functions are used in the application
+        // it could slightly increase performance
         std::cin.sync_with_stdio(false);
         std::cin >> std::noskipws;
-        detail::RangeSplitter<std::istream_iterator<char>> line_reader(std::istream_iterator<char>(std::cin), std::istream_iterator<char>());
-        return strat::round_robin(line_reader, tokenizer, line_findings_sink);
+        return strat::round_robin(detail::RangeSplitter<std::istream_iterator<char>>(std::istream_iterator<char>(std::cin), std::istream_iterator<char>()),
+            tokenizer,
+            line_findings_sink);
     }
+    // open an input_path file with its path given in argv[1] by means of mapping, opening in readonly mode
     else
     {
-        // open an input file with its path given in argv[1] by means of mapping, opening in readonly mode
-        boost::iostreams::mapped_file_source const source(input.data());
+        boost::iostreams::mapped_file_source const source(input_path.data());
         if (!source)
         {
-            std::cerr << "error: couldn't open an input file '" << input << "'\n";
-            return 1;
+            std::cerr << "error: couldn't open an input file '" << input_path << "'\n";
+            return EXIT_FAILURE;
         }
-
-        return kFileUseRR
-            ? strat::round_robin(detail::RangeSplitter<decltype(source.begin())>(source), tokenizer, line_findings_sink)
-            : strat::divide_and_conquer(source, tokenizer, line_findings_sink);
+        else
+        {
+            return kFileUseRR
+                ? strat::round_robin(detail::RangeSplitter<decltype(source.begin())>(source), tokenizer, line_findings_sink)
+                : strat::divide_and_conquer(source, tokenizer, line_findings_sink);
+        }
     }
 }
 catch (std::exception const &ex)
 {
     std::cerr << "error: " << ex.what() << '\n';
-    return 1;
+    return EXIT_FAILURE;
 }
 catch (...)
 {
     std::cerr << "internal error\n";
-    return 1;
+    return EXIT_FAILURE;
 }
 
