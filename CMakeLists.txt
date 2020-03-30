@@ -4,7 +4,7 @@ if (NOT EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     message(SEND_ERROR "conanbuildinfo.cmake not generated")
 endif()
 
-project(mtfind)
+project(mtfind CXX)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)
 

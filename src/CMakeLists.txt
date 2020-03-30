@@ -1,4 +1,3 @@
-find_package(Boost REQUIRED COMPONENTS iostreams system filesystem)
 find_package(Threads REQUIRED)
 
 set(SOURCES
@@ -23,8 +22,5 @@ set(HEADERS
 add_executable(mtfind ${SOURCES} ${HEADERS})
 target_include_directories(mtfind PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
-target_link_libraries(mtfind PRIVATE Boost::boost)
-target_link_libraries(mtfind PRIVATE Boost::iostreams)
-target_link_libraries(mtfind PRIVATE Boost::system)
-target_link_libraries(mtfind PRIVATE Boost::filesystem)
+target_link_libraries(mtfind PRIVATE CONAN_PKG::boost)
 target_link_libraries(mtfind PRIVATE Threads::Threads)
