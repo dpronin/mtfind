@@ -6,6 +6,7 @@
 
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/iterator_range.hpp>
+#include <boost/utility/string_view.hpp>
 
 #include "chunk.hpp"
 

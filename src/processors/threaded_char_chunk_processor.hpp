@@ -6,7 +6,6 @@
 #include <utility>
 #include <atomic>
 
-#include <boost/utility/string_view.hpp>
 #include <boost/lockfree/spsc_queue.hpp>
 
 namespace mtfind

@@ -9,7 +9,6 @@
 #include <memory>
 
 #include <boost/range/adaptor/filtered.hpp>
-#include <boost/utility/string_view.hpp>
 #include <boost/asio/io_service.hpp>
 
 namespace mtfind
