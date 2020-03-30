@@ -13,7 +13,8 @@ set(HEADERS
     aux/range_splitter.hpp
     aux/chunk_handler_ctx.hpp
     aux/iterator_concept.hpp
-    searchers/searcher.hpp
+    searchers/naive_searcher.hpp
+    searchers/boyer_moore_searcher.hpp
     tokenizers/range_tokenizer.hpp
     processors/multithreaded_task_processor.hpp
     processors/threaded_char_chunk_processor.hpp

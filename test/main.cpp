@@ -3,6 +3,7 @@
 #include <string>
 #include <tuple>
 #include <vector>
+#include <functional>
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
@@ -10,7 +11,8 @@
 #include <boost/range/iterator_range.hpp>
 
 #include "aux/range_splitter.hpp"
-#include "searchers/searcher.hpp"
+#include "searchers/naive_searcher.hpp"
+#include "searchers/boyer_moore_searcher.hpp"
 #include "tokenizers/range_tokenizer.hpp"
 
 using namespace mtfind;
@@ -47,8 +49,16 @@ TEST(RangeSplitter, SplitsStringAtWhitespaces)
     EXPECT_EQ(expected_words, result_words);
 }
 
-TEST(Searcher, SuccessfulPatternLookupNoComparator)
+template <typename T>
+struct Searcher : public Test {};
+
+using Searchers = Types<NaiveSearcher<std::string>, BoyerMooreSearcher<std::string>>;
+TYPED_TEST_CASE(Searcher, Searchers);
+
+TYPED_TEST(Searcher, SuccessfulPatternLookupNoComparator)
 {
+    using SearcherT = TypeParam;
+
     std::vector<std::tuple<std::string, std::string, size_t>> const records =
     {
         /*          input text          */ /* pattern to look up */ /* finding's start position */
@@ -61,15 +71,17 @@ TEST(Searcher, SuccessfulPatternLookupNoComparator)
     {
         auto const &text = std::get<0>(record);
         auto const &pattern = std::get<1>(record);
-        Searcher<decltype(pattern)> searcher(pattern);
+        SearcherT searcher(pattern);
         auto const token = searcher(text.cbegin(), text.cend());
         EXPECT_THAT(token, ElementsAreArray(pattern));
         EXPECT_EQ(std::distance(text.cbegin(), token.begin()), std::get<2>(record));
     }
 }
 
-TEST(Searcher, FailedPatternLookupNoComparator)
+TYPED_TEST(Searcher, FailedPatternLookupNoComparator)
 {
+    using SearcherT = TypeParam;
+
     std::vector<std::pair<std::string, std::string>> const records =
     {
         /*          input text          */ /* pattern to look up */
@@ -82,15 +94,26 @@ TEST(Searcher, FailedPatternLookupNoComparator)
     {
         auto const &text = std::get<0>(record);
         auto const &pattern = std::get<1>(record);
-        Searcher<decltype(pattern)> searcher(pattern);
+        SearcherT searcher(pattern);
         auto const token = searcher(text.cbegin(), text.cend());
         EXPECT_TRUE(token.empty());
         EXPECT_EQ(token.begin(), text.cend());
     }
 }
 
-TEST(Searcher, SuccessfulPatternLookupWithComparator)
+template <typename T>
+struct ComparatoredSearcher : public Test {};
+
+using ComparatoredSearchers = Types<
+    NaiveSearcher<std::string, std::function<bool(char, char)>>,
+    BoyerMooreSearcher<std::string, std::function<bool(char, char)>>
+>;
+TYPED_TEST_CASE(ComparatoredSearcher, ComparatoredSearchers);
+
+TYPED_TEST(ComparatoredSearcher, SuccessfulPatternLookupWithComparator)
 {
+    using SearcherT = TypeParam;
+
     using comparator_t = std::function<bool(char, char)>;
     std::vector<comparator_t> const comparators = {
         [](auto c, auto p){ return '?' == p || p == c; },                         // the pattern comparator used in the application
@@ -112,7 +135,7 @@ TEST(Searcher, SuccessfulPatternLookupWithComparator)
     {
         auto const &text = std::get<0>(record);
         auto const &pattern = std::get<1>(record);
-        Searcher<decltype(pattern), comparator_t> searcher(pattern, std::get<2>(record));
+        SearcherT searcher(pattern, std::get<2>(record));
         auto const &exp_token_pos_array = std::get<3>(record);
         auto exp_token_pos = exp_token_pos_array.cbegin();
         auto token = searcher(text);
@@ -128,8 +151,10 @@ TEST(Searcher, SuccessfulPatternLookupWithComparator)
     }
 }
 
-TEST(Searcher, FailedPatternLookupWithComparator)
+TYPED_TEST(ComparatoredSearcher, FailedPatternLookupWithComparator)
 {
+    using SearcherT = TypeParam;
+
     using comparator_t = std::function<bool(char, char)>;
     std::vector<comparator_t> const comparators = {
         [](auto c, auto p){ return false; },                                        // always false binary function
@@ -149,7 +174,7 @@ TEST(Searcher, FailedPatternLookupWithComparator)
     {
         auto const &text = std::get<0>(record);
         auto const &pattern = std::get<1>(record);
-        Searcher<decltype(pattern), comparator_t> searcher(pattern, std::get<2>(record));
+        NaiveSearcher<decltype(pattern), comparator_t> searcher(pattern, std::get<2>(record));
         auto const token = searcher(text);
         EXPECT_TRUE(token.empty());
         EXPECT_EQ(token.begin(), text.cend());
@@ -196,7 +221,9 @@ TEST(RangeTokenizer, Tokenizes)
     auto searcher_wrapper = [&searcher](auto&&...args){ return searcher(std::forward<decltype(args)>(args)...); };
 
     RangeTokenizer<decltype(searcher_wrapper)> tokenizer(searcher_wrapper);
-    auto const tokens = tokenizer(text);
+
+    std::vector<boost::iterator_range<std::string::const_iterator>> tokens;
+    tokenizer(text, std::back_inserter(tokens));
 
     EXPECT_EQ(tokens.size(), exp_tokens.size());
 
@@ -223,7 +250,10 @@ TEST(RangeTokenizer, ReturnsEmptyCollection)
     auto searcher_wrapper = [&searcher](auto&&...args){ return searcher(std::forward<decltype(args)>(args)...); };
 
     RangeTokenizer<decltype(searcher_wrapper)> tokenizer(searcher_wrapper);
-    EXPECT_TRUE(tokenizer(text).empty());
+
+    std::vector<boost::iterator_range<std::string::const_iterator>> tokens;
+    tokenizer(text, std::back_inserter(tokens));
+    EXPECT_TRUE(tokens.empty());
 }
 
 } // anonymous namespace

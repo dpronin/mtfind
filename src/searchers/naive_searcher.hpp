@@ -12,13 +12,14 @@ namespace mtfind
 
 ///
 /// @brief      Searcher class that uses a pattern and a comparator given
-///             to search a subrange in an input range
+///             to seek a subrange in an input range
+///             Searching algorithm is naive
 ///
 /// @tparam     Pattern
 /// @tparam     Comparator
 ///
 template<typename Pattern, typename Comparator = void>
-class Searcher
+class NaiveSearcher
 {
 public:
     ///
@@ -27,28 +28,30 @@ public:
     /// @param[in]  pattern  The pattern that input ranges will be compared with
     /// @param[in]  comp     The comparator
     ///
-    explicit Searcher(Pattern pattern, Comparator comp = Comparator()) noexcept : pattern_(pattern), comp_(std::move(comp))
+    explicit NaiveSearcher(Pattern pattern, Comparator comp = Comparator()) noexcept : pattern_(pattern), comp_(std::move(comp))
     {}
 
     ///
-    /// @brief      Matches the input range against the pattern
+    /// @brief      Finds the first occurrence of the pattern
+    ///             with respect to the comparator in the input range
     ///
-    /// @param[in]  first   The first iterator of the range
-    /// @param[in]  last    The last iterator of the range
+    /// @param[in]  first   The first forward iterator of the range to explore
+    /// @param[in]  last    The last forward iterator of the range to explore
     ///
-    /// @tparam     Iterator
+    /// @tparam     ForwardIt   Forward iterator
     ///
     /// @return     A subrange of input's iterators that meets the pattern
     ///
-    template<typename Iterator>
-    auto operator()(Iterator first, Iterator last) const noexcept
+    template<typename ForwardIt>
+    auto operator()(ForwardIt first, ForwardIt last) const noexcept
     {
         first = std::search(first, last, pattern_.begin(), pattern_.end(), comp_);
         return boost::make_iterator_range(first, last != first ? std::next(first, pattern_.size()) : last);
     }
 
     ///
-    /// @brief      Matches the input range against the pattern
+    /// @brief      Finds the first occurrence of the pattern
+    ///             with respect to the comparator in the input range
     ///
     /// @param[in]  input   Input range to explore
     ///
@@ -65,12 +68,13 @@ private:
 };
 
 ///
-/// @brief      Searcher class that uses a pattern given to search a subrange in an input range
+/// @brief      Searcher class that uses a pattern given to seek a subrange in an input range
+///             Searching algorithm is naive
 ///
 /// @tparam     Pattern
 ///
 template<typename Pattern>
-class Searcher<Pattern, void>
+class NaiveSearcher<Pattern, void>
 {
 public:
     ///
@@ -78,28 +82,30 @@ public:
     ///
     /// @param[in]  pattern  The pattern
     ///
-    explicit Searcher(Pattern pattern) noexcept : pattern_(pattern)
+    explicit NaiveSearcher(Pattern pattern) noexcept : pattern_(pattern)
     {}
 
     ///
-    /// @brief      Matches the input range against the pattern
+    /// @brief      Finds the first occurrence of the pattern
+    ///             with respect to the comparator in the input range
     ///
-    /// @param[in]  first   The first iterator of the range
-    /// @param[in]  last    The last iterator of the range
+    /// @param[in]  first   The first forward iterator of the range to explore
+    /// @param[in]  last    The last forward iterator of the range to explore
     ///
-    /// @tparam     Iterator
+    /// @tparam     ForwardIt  Forward iterator
     ///
     /// @return     A subrange of input's iterators that meets the pattern
     ///
-    template<typename Iterator>
-    auto operator()(Iterator first, Iterator last) const noexcept
+    template<typename ForwardIt>
+    auto operator()(ForwardIt first, ForwardIt last) const noexcept
     {
         first = std::search(first, last, pattern_.begin(), pattern_.end());
         return boost::make_iterator_range(first, last != first ? std::next(first, pattern_.size()) : last);
     }
 
     ///
-    /// @brief      Matches the input range against the pattern
+    /// @brief      Finds the first occurrence of the pattern
+    ///             with respect to the comparator in the input range
     ///
     /// @param[in]  input   Input range to explore
     ///

@@ -13,7 +13,8 @@ set(HEADERS
     ${MTFIND_SRC_DIR}/tokenizers/range_tokenizer.hpp
     ${MTFIND_SRC_DIR}/processors/multithreaded_task_processor.hpp
     ${MTFIND_SRC_DIR}/processors/threaded_char_chunk_processor.hpp
-    ${MTFIND_SRC_DIR}/searchers/searcher.hpp
+    ${MTFIND_SRC_DIR}/searchers/naive_searcher.hpp
+    ${MTFIND_SRC_DIR}/searchers/boyer_moore_searcher.hpp
     ${MTFIND_SRC_DIR}/strat/round_robin.hpp
     ${MTFIND_SRC_DIR}/strat/divide_and_conquer.hpp
 )

@@ -13,7 +13,8 @@
 #include <boost/utility/string_view.hpp>
 
 #include "aux/range_splitter.hpp"
-#include "searchers/searcher.hpp"
+#include "searchers/naive_searcher.hpp"
+#include "searchers/boyer_moore_searcher.hpp"
 #include "tokenizers/range_tokenizer.hpp"
 
 #include "strat/round_robin.hpp"
@@ -81,7 +82,7 @@ int main(int argc, char const *argv[]) try
     auto pattern_comparator = Application::instance().pattern_comparator();
     // define a searcher type based on the pattern and the comparator dedicated to comparing
     // symbols from the pattern and the source file
-    using PatternSearcher = Searcher<decltype(pattern), decltype(pattern_comparator)>;
+    using PatternSearcher = BoyerMooreSearcher<decltype(pattern), decltype(pattern_comparator)>;
     // define and construct a tokenizer based on the searcher finding subranges
     // those will be extracted using the searcher constructed and based on the PatternSearcher type
     using Tokenizer = RangeTokenizer<PatternSearcher>;
