@@ -125,25 +125,25 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
 ///
 /// @brief      Process and parse with a tokenizer each chunk that the reader returns
 ///             All the findings will be given to a sink callback in chunk index ascending order
-///             Strategy 'Round-robin' is used
+///             Strategy 'Round-Robin' is used
 ///
-/// @details    Round-robin approach is about distributing the load among the workers
+/// @details    Round-Robin approach is about distributing the load among the workers
 ///             equally by calling them to process chunks one by one
 ///             The underlying implementation reads a source region chunk by chunk and
 ///             iterates over the workers passing them chunks with their indices, no synchronization
 ///             is required
 ///
-/// @param[in]  reader         The functor-like object that would be called to receive a chunk
-///                            On each iteration the reader is called If chunks are exhausted by calling operator !
-/// @param[in]  tokenizer      The tokenizer being called on each chunk to receive chunks
-/// @param[in]  findings_sink  The sink for chunk findings
-/// @param[in]  workers_count  The number of threads to be used
+/// @param[in]  reader         A functor-like object that would be called to receive a chunk
+///                            The reader is called until it is exhausted, what it is checked by calling operator!()
+/// @param[in]  tokenizer      A tokenizer being called on each chunk to receive findings
+/// @param[in]  findings_sink  A sink for chunk findings
+/// @param[in]  workers_count  A number of threads to use
 ///
 /// @tparam     ChunkReader    A reader that will fetch a chunk until reader's source is depleted
-/// @tparam     ChunkTokenizer A Functor like tokenizer for a chunk
-/// @tparam     FindingsSink   A Functor-like sink type
+/// @tparam     ChunkTokenizer A functor like tokenizer for a chunk
+/// @tparam     FindingsSink   A functor-like sink type
 ///
-/// @return     0 in case of success, any other value otherwise
+/// @return     0 in case of success, any other values otherwise
 ///
 template<typename ChunkReader, typename ChunkTokenizer, typename FindingsSink>
 int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsSink findings_sink, size_t workers_count = std::thread::hardware_concurrency())
@@ -195,7 +195,7 @@ int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsSink fin
 
     // send one by one findings to the sink in ascending order sorted by chunk index
     // contexts's chunks findings ranges given are sorted ascendingly themselves since RR strategy is used
-    // the task is to behave like merge sort algorithm by finding out the minimal item
+    // the task is to behave like merge sort algorithm by finding out the minimal-indexed item
     // on each iteration
     while (!result_ranges.empty())
     {

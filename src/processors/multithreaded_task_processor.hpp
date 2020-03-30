@@ -15,6 +15,10 @@
 namespace mtfind
 {
 
+///
+/// @brief      This class describes a multithreaded task processor.
+///             It is dedicated to concurrently running the tasks in several threads
+///
 class MultithreadedTaskProcessor
 {
 public:
@@ -30,9 +34,20 @@ public:
     MultithreadedTaskProcessor(MultithreadedTaskProcessor&&)            = delete;
     MultithreadedTaskProcessor& operator=(MultithreadedTaskProcessor&&) = delete;
 
+    ///
+    /// @brief      Schedule a task to the processor
+    ///
+    /// @param      task  The task
+    ///
+    /// @tparam     Task
+    ///
     template<typename Task>
-    void operator()(Task task) { io_.post(task); }
+    void operator()(Task &&task) { io_.post(std::forward<Task>(task)); }
 
+    ///
+    /// @brief      Runs the processor so that it can schedule and run tasks
+    ///             passed into operator()
+    ///
     void run()
     {
         if (!work_)
@@ -44,6 +59,9 @@ public:
         }
     }
 
+    ///
+    /// @brief      Waits until all the tasks are done
+    ///
     void wait()
     {
         work_.reset();
@@ -52,9 +70,19 @@ public:
             worker.get();
     }
 
+    ///
+    /// @brief      Stops the processor as soon as possible
+    ///
+    /// @details    All tasks that have been pushed but not scheduled yet
+    ///             are cancelled and not be executed
+    ///
     void stop() { io_.stop(); }
 
-
+    ///
+    /// @brief      Gets a number of threads used
+    ///
+    /// @return     A number of threads
+    ///
     auto workers_count() const noexcept { return workers_.size(); }
 
 private:

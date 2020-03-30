@@ -31,14 +31,14 @@ public:
     {}
 
     ///
-    /// @brief      Matches the input string-like range against the pattern
+    /// @brief      Matches the input range against the pattern
     ///
-    /// @param[in]  first   The first iterator
-    /// @param[in]  last    The last iterator
+    /// @param[in]  first   The first iterator of the range
+    /// @param[in]  last    The last iterator of the range
     ///
     /// @tparam     Iterator
     ///
-    /// @return     A range of input's iterators that meets the pattern
+    /// @return     A subrange of input's iterators that meets the pattern
     ///
     template<typename Iterator>
     auto operator()(Iterator first, Iterator last) const noexcept
@@ -48,7 +48,7 @@ public:
     }
 
     ///
-    /// @brief      Matches the input string against the pattern
+    /// @brief      Matches the input range against the pattern
     ///
     /// @param[in]  input   Input range to explore
     ///
@@ -82,14 +82,14 @@ public:
     {}
 
     ///
-    /// @brief      Matches the input string-like range against the pattern
+    /// @brief      Matches the input range against the pattern
     ///
-    /// @param[in]  first   The first iterator
-    /// @param[in]  last    The last iterator
+    /// @param[in]  first   The first iterator of the range
+    /// @param[in]  last    The last iterator of the range
     ///
     /// @tparam     Iterator
     ///
-    /// @return     A range of input's iterators that meets the pattern
+    /// @return     A subrange of input's iterators that meets the pattern
     ///
     template<typename Iterator>
     auto operator()(Iterator first, Iterator last) const noexcept
@@ -99,7 +99,7 @@ public:
     }
 
     ///
-    /// @brief      Matches the input string against the pattern
+    /// @brief      Matches the input range against the pattern
     ///
     /// @param[in]  input   Input range to explore
     ///

@@ -32,7 +32,7 @@ template<typename Iterator,
 typename HandlerGenerator,
 typename Task = std::function<void()>,
 typename = typename std::enable_if<mtfind::detail::is_random_access_char_iterator<Iterator>>::type>
-auto generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_number, HandlerGenerator handler_generator, bool process_empty_chunk = false)
+auto generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_number, HandlerGenerator handler_generator, bool process_empty_chunks = false)
 {
     std::vector<Task> tasks;
 
@@ -41,7 +41,7 @@ auto generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_nu
 
     std::function<Task(Iterator, Iterator, decltype(handler_generator()))> task_generator;
 
-    if (process_empty_chunk)
+    if (process_empty_chunks)
     {
         task_generator = [] (auto first, auto last, auto handler) {
             return [=] () mutable {
@@ -69,12 +69,12 @@ auto generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_nu
         };
     }
 
-    // all the next chunks are dedicated to fairly dividing the region among tasks
+    // all the next code lines are dedicated to fairly dividing the region among tasks
     auto data_chunk_size = std::distance(start, end) / tasks_number;
     if (0 == data_chunk_size)
         data_chunk_size = 1;
 
-    // a helper for searching for a nearest new chunk symbol
+    // a helper for seeking a nearest new line symbol
     auto find_next_nl = [=](auto first){
         return std::find(std::next(first, std::min(data_chunk_size, static_cast<size_t>(std::distance(first, end)))), end, '\n');
     };
@@ -83,6 +83,8 @@ auto generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_nu
     for (auto first = start; first != end; ++data_chunk_i)
     {
         auto last = (data_chunk_i < tasks_number - 1) ? find_next_nl(first) : end;
+        // if we got onto a boundary where several successive new line
+        // symbols occur, the task will get them all to process until the toplast includingly
         while (end != last && *last == '\n')
             ++last;
         // generate a task for the piece of the region
@@ -98,27 +100,25 @@ auto generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_nu
 ///
 /// @brief      Process and parse with a tokenizer each chunk of the region provided by a range
 ///             All the findings will be provided via a sink callback in chunk index ascending order
-///             Strategy Divide-and-conquer is used
+///             Strategy Divide-and-Conquer is used
 ///
-/// @details    Divide-and-conquer approach is about dividing the region into equal-length
+/// @details    Divide-and-Conquer approach is about dividing the region into equal-length
 ///             subregions and pass each of them in a separate worker thread, no synchronization
 ///             is required
 ///
-/// @param[in]  first                RAI to the first character of the region
-/// @param[in]  last                 RAI to the past the last character of the region
-/// @param[in]  tokenizer            The tokenizer being called on each chunk
-/// @param[in]  chunk_findings_sink  The sink for chunk findings
-/// @param[in]  workers_count        The number of threads to be used
+/// @param[in]  first                A RAI to the first of the region
+/// @param[in]  last                 A RAI to the past the last of the region
+/// @param[in]  tokenizer            A tokenizer being called on each chunk
+/// @param[in]  chunk_findings_sink  A sink for chunk findings
+/// @param[in]  workers_count        A number of threads to use
 ///
-/// @tparam     Iterator             RAI character iterator
-/// @tparam     RangeTokenizer       A Functor like tokenizer for a chunk
-/// @tparam     ChunkFindingsSink    A Functor-like sink type
+/// @tparam     Iterator             A RAI iterator
+/// @tparam     RangeTokenizer       A functor like tokenizer for a chunk
+/// @tparam     ChunkFindingsSink    A functor-like sink type
 ///
-/// @return     0 in case of success, any other value otherwise
+/// @return     0 in case of success, any other values otherwise
 ///
-template<typename Iterator,
-typename RangeTokenizer,
-typename ChunkFindingsSink>
+template<typename Iterator, typename RangeTokenizer, typename ChunkFindingsSink>
 typename std::enable_if<mtfind::detail::is_random_access_char_iterator<Iterator>, int>::type
 divide_and_conquer(Iterator first, Iterator last, RangeTokenizer tokenizer, ChunkFindingsSink &&findings_sink, size_t workers_count = std::thread::hardware_concurrency())
 {
@@ -142,6 +142,7 @@ divide_and_conquer(Iterator first, Iterator last, RangeTokenizer tokenizer, Chun
     auto chunk_handler_generator = [tokenizer, ctx_it = handlers_ctxs.begin()] () mutable {
         // constexpr size_t kSmallVectorCapacity = 100;
         using RangeIterator = typename ContextType::value_type::const_iterator;
+        // @info no big difference between small_vector and a regular vector in this case of usage
         // using Container = boost::container::small_vector<boost::iterator_range<Iterator>>, kSmallVectorCapacity>;
         using Container = std::vector<boost::iterator_range<RangeIterator>>;
         // the handler will be called on each chunk by a worker
@@ -204,22 +205,22 @@ divide_and_conquer(Iterator first, Iterator last, RangeTokenizer tokenizer, Chun
 ///
 /// @brief      Process and parse with a tokenizer each chunk of the region provided by a range
 ///             All the findings will be provided via a sink callback in chunk index ascending order
-///             Strategy Divide-and-conquer is used
+///             Strategy Divide-and-Conquer is used
 ///
-/// @details    Divide-and-conquer approach is about dividing the region into equal-length
+/// @details    Divide-and-Conquer approach is about dividing the region into equal-length
 ///             subregions and pass each of them in a separate worker thread, no synchronization
 ///             is required
 ///
-/// @param[in]  source_range   Range of characters given
-/// @param[in]  tokenizer      The tokenizer being called on each chunk
-/// @param[in]  findings_sink  The sink for chunk findings
-/// @param[in]  workers_count  The number of threads to be used
+/// @param[in]  source_range   A Range of the source region
+/// @param[in]  tokenizer      A tokenizer being called on each chunk
+/// @param[in]  findings_sink  A sink for chunk findings
+/// @param[in]  workers_count  A number of threads to use
 ///
-/// @tparam     Range               Range of characters
+/// @tparam     Range               Range
 /// @tparam     RangeTokenizer      A Functor like tokenizer for a chunk
 /// @tparam     ChunkFindingsSink   A Functor-like sink type
 ///
-/// @return     0 in case of success, any other value otherwise
+/// @return     0 in case of success, any other values otherwise
 ///
 template<typename Range, typename RangeTokenizer, typename ChunkFindingsSink>
 decltype(auto) divide_and_conquer(Range const &source_range, RangeTokenizer tokenizer, ChunkFindingsSink &&findings_sink, size_t workers_count = std::thread::hardware_concurrency())

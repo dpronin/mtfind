@@ -16,6 +16,10 @@ if (${CMAKE_BUILD_TYPE} MATCHES Debug)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg -ggdb")
 endif()
 
+# if (${CMAKE_BUILD_TYPE} MATCHES Release)
+#     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
+# endif()
+
 add_subdirectory(src)
 
 if (ENABLE_TEST)
