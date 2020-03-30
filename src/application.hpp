@@ -3,6 +3,9 @@
 namespace mtfind
 {
 
+///
+/// @brief          Class that is used for signleton of application's main parameters and requisites
+///
 class Application final
 {
 public:
@@ -13,10 +16,18 @@ public:
     }
 
 public:
-    // comparator for equalness for the pattern
+    ///
+    /// @brief      The comparator for equalness for the pattern
+    ///
+    /// @return     The comparator
+    ///
     auto pattern_comparator() noexcept { return [](auto c, auto p){ return '?' == p || c == p; }; }
 
-    // define a validator for the pattern
+    ///
+    /// @brief      The validator for the application's pattern provided through arguments
+    ///
+    /// @return     Validator of a pattern
+    ///
     auto pattern_validator() noexcept { return [](auto c){ return 0 <= c && c <= 0x7E && '\n' != c && '\r' != c || '?' == c; }; }
 
     ///

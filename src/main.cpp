@@ -102,9 +102,9 @@ int main(int argc, char const *argv[]) try
             tokenizer,
             line_findings_sink);
     }
-    // open an input_path file with its path given in argv[1] by means of mapping, opening in readonly mode
     else
     {
+        // open an input_path file with its path given in argv[1] by means of mapping, opening in readonly mode
         boost::iostreams::mapped_file_source const source(input_path.data());
         if (!source)
         {

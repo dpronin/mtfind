@@ -1,12 +1,7 @@
 #pragma once
 
-#include <cstddef>
-
-#include <vector>
 #include <utility>
 #include <iterator>
-
-#include <boost/range/iterator_range.hpp>
 
 namespace mtfind
 {
@@ -25,43 +20,43 @@ public:
     {}
 
     ///
-    /// @brief      Process source range represented by iterators
+    /// @brief      Tokenize source range represented by iterators,
+    ///             results are pushed to an output iterator
     ///
     /// @param[in]  first      The start of the range
     /// @param[in]  last       The end of the range
+    /// @param[in]  last       The end of the range
     ///
-    /// @tparam     Iterator
+    /// @tparam     InputIt    Input iterator
+    /// @tparam     OutputIt   Output iterator
     ///
     /// @return     An array of decoupled source's peaces those the searcher has fired for
     ///
-    template<typename Iterator>
-    auto operator()(Iterator first, Iterator last)
+    template<typename InputIt, typename OutputIt>
+    void operator()(InputIt first, InputIt last, OutputIt out)
     {
-        std::vector<boost::iterator_range<Iterator>> res;
-
-        while (first != last)
+        for (; first != last; ++out)
         {
             auto token = searcher_(first, last);
             if (token.empty())
                 break;
             first = token.end();
-            res.push_back(std::move(token));
+            *out = std::move(token);
         }
-
-        return res;
     }
 
     ///
     /// @brief      Searches for a pattern in the range composing the set of findings
     ///
     /// @param[in]  range   The input range to parse
+    /// @param[in]  out     The output iterator to store tokens
     ///
     /// @tparam     Range
     ///
     /// @return     An array of decoupled source's peaces those the searcher has fired for
     ///
-    template <typename Range>
-    auto operator()(Range const &range) { return (*this)(std::begin(range), std::end(range)); }
+    template <typename Range, typename OutputIt>
+    void operator()(Range const &range, OutputIt out) { return (*this)(std::begin(range), std::end(range), out); }
 
 private:
     Searcher searcher_;

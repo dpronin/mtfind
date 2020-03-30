@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdlib>
 
 #include <thread>
 #include <utility>
@@ -16,6 +17,8 @@
 #include <boost/range/algorithm/min_element.hpp>
 #include <boost/range/algorithm/transform.hpp>
 #include <boost/range/algorithm_ext.hpp>
+#include <boost/range/iterator_range.hpp>
+// #include <boost/container/small_vector.hpp>
 
 #include "processors/threaded_char_chunk_processor.hpp"
 
@@ -120,8 +123,8 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
 } // namespace detail
 
 ///
-/// @brief      Process and parse with a tokenizer each chunk of the region provided by a range
-///             All the findings will be provided via a sink callback in chunk index ascending order
+/// @brief      Process and parse with a tokenizer each chunk that the reader returns
+///             All the findings will be given to a sink callback in chunk index ascending order
 ///             Strategy 'Round-robin' is used
 ///
 /// @details    Round-robin approach is about distributing the load among the workers
@@ -132,8 +135,7 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
 ///
 /// @param[in]  reader         The functor-like object that would be called to receive a chunk
 ///                            On each iteration the reader is called If chunks are exhausted by calling operator !
-/// @param[in]  last           Forward iterator to the past the last character of the region
-/// @param[in]  tokenizer      The tokenizer being called on each chunk
+/// @param[in]  tokenizer      The tokenizer being called on each chunk to receive chunks
 /// @param[in]  findings_sink  The sink for chunk findings
 /// @param[in]  workers_count  The number of threads to be used
 ///
@@ -154,12 +156,21 @@ int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsSink fin
 
     // generators of handlers of the file's chunks being read
     auto chunk_handler_gen = [tokenizer, ctx_it = handlers_ctxs.begin()] () mutable {
+        // constexpr size_t kSmallVectorCapacity = 100;
+        using RangeIterator = typename ContextType::value_type::const_iterator;
+        // @info no big difference between small_vector and a regular vector in this case of usage
+        // using Container = boost::container::small_vector<boost::iterator_range<Iterator>>, kSmallVectorCapacity>;
+        using Container = std::vector<boost::iterator_range<RangeIterator>>;
         // the handler will be called on each chunk by a worker
         // every worker is given a chunk and its index, which they pass to this handler
-        return [tokenizer, &ctx = *ctx_it++](auto chunk_idx, auto const &chunk_value) mutable {
-            auto range_of_findings = tokenizer(chunk_value);
-            if (!range_of_findings.empty())
-                ctx.consume(chunk_idx, std::begin(chunk_value), std::move(range_of_findings));
+        return [tokenizer, &ctx = *ctx_it++, tokens = Container()](auto chunk_idx, auto const &chunk_value) mutable {
+
+            tokenizer(chunk_value, std::back_inserter(tokens));
+            if (!tokens.empty())
+            {
+                ctx.consume(chunk_idx, std::begin(chunk_value), tokens);
+                tokens.clear();
+            }
         };
     };
 
@@ -206,7 +217,7 @@ int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsSink fin
         }
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 } // namespace mtfind

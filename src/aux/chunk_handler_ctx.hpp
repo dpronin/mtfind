@@ -16,12 +16,14 @@ template<typename Value>
 class ChunkHandlerCtx
 {
 public:
-    using Container      = ChunksFindings<Value>;
+    using value_type     = Value;
+    using Container      = ChunksFindings<value_type>;
     using const_iterator = typename Container::const_iterator;
 
-    template<typename Iterator, template<typename, typename> class Container, typename Allocator, typename U = Value>
-    typename std::enable_if<std::is_same<U, boost::string_view>::value>::type
-    consume(size_t chunk_idx, Iterator first, Container<boost::iterator_range<Iterator>, Allocator> const &findings)
+    template<typename Iterator, typename Container, typename U = Value>
+    auto consume(size_t chunk_idx, Iterator first, Container const &findings) ->
+        typename std::enable_if<std::is_same<U, boost::string_view>::value
+            && std::is_same<typename Container::value_type, boost::iterator_range<Iterator>>::value>::type
     {
         auto transformed_findings = findings | boost::adaptors::transformed([first](auto const &finding) {
             return Finding<Value>(std::distance(first, finding.begin()) + 1, Value(&*finding.begin(), finding.size()));
@@ -29,9 +31,10 @@ public:
         chunks_findings_.push_back(std::make_pair(chunk_idx + 1, Findings<Value>{transformed_findings.begin(), transformed_findings.end()}));
     }
 
-    template<typename Iterator, template<typename, typename> class Container, typename Allocator, typename U = Value>
-    typename std::enable_if<!std::is_same<U, boost::string_view>::value>::type
-    consume(size_t chunk_idx, Iterator first, Container<boost::iterator_range<Iterator>, Allocator> const &findings)
+    template<typename Iterator, typename Container, typename U = Value>
+    auto consume(size_t chunk_idx, Iterator first, Container const &findings) ->
+        typename std::enable_if<!std::is_same<U, boost::string_view>::value
+            && std::is_same<typename Container::value_type, boost::iterator_range<Iterator>>::value>::type
     {
         auto transformed_findings = findings | boost::adaptors::transformed([first](auto const &finding) {
             return Finding<Value>(std::distance(first, finding.begin()) + 1, Value(finding.begin(), finding.end()));

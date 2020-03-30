@@ -13,6 +13,8 @@
 #include <boost/range/numeric.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/utility/string_view.hpp>
+#include <boost/range/iterator_range.hpp>
+// #include <boost/container/small_vector.hpp>
 
 #include "processors/multithreaded_task_processor.hpp"
 
@@ -138,16 +140,23 @@ divide_and_conquer(Iterator first, Iterator last, RangeTokenizer tokenizer, Chun
 
     // generators of handlers of the file's chunks being read
     auto chunk_handler_generator = [tokenizer, ctx_it = handlers_ctxs.begin()] () mutable {
+        // constexpr size_t kSmallVectorCapacity = 100;
+        using RangeIterator = typename ContextType::value_type::const_iterator;
+        // using Container = boost::container::small_vector<boost::iterator_range<Iterator>>, kSmallVectorCapacity>;
+        using Container = std::vector<boost::iterator_range<RangeIterator>>;
         // the handler will be called on each chunk by a worker
         // every worker starts handling chunks from the chunk index 1 (see above)
         // to learn what the index has been last we preserve the 'last_chunk_idx'
         // in order to restore real chunk indices in the file afterward
-        return [tokenizer, &ctx = *ctx_it++](auto chunk_idx, auto const &chunk_value) mutable {
+        return [tokenizer, &ctx = *ctx_it++, tokens = Container()](auto chunk_idx, auto const &chunk_value) mutable {
             if (!chunk_value.empty())
             {
-                auto range_of_findings = tokenizer(chunk_value);
-                if (!range_of_findings.empty())
-                    ctx.consume(chunk_idx, std::begin(chunk_value), std::move(range_of_findings));
+                tokenizer(chunk_value, std::back_inserter(tokens));
+                if (!tokens.empty())
+                {
+                    ctx.consume(chunk_idx, std::begin(chunk_value), tokens);
+                    tokens.clear();
+                }
             }
             ctx.set_last_chunk_idx(chunk_idx);
         };
@@ -189,7 +198,7 @@ divide_and_conquer(Iterator first, Iterator last, RangeTokenizer tokenizer, Chun
         chunk_offset += ctx.last_chunk_idx();
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 ///
