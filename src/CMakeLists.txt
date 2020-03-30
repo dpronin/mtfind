@@ -17,7 +17,7 @@ set(HEADERS
     searchers/boyer_moore_searcher.hpp
     tokenizers/range_tokenizer.hpp
     processors/multithreaded_task_processor.hpp
-    processors/threaded_char_chunk_processor.hpp
+    processors/threaded_chunk_processor.hpp
 )
 
 add_executable(mtfind ${SOURCES} ${HEADERS})

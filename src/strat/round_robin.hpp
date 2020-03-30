@@ -13,14 +13,13 @@
 
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/range/numeric.hpp>
-#include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm/min_element.hpp>
 #include <boost/range/algorithm/transform.hpp>
 #include <boost/range/algorithm_ext.hpp>
 #include <boost/range/iterator_range.hpp>
 // #include <boost/container/small_vector.hpp>
 
-#include "processors/threaded_char_chunk_processor.hpp"
+#include "processors/threaded_chunk_processor.hpp"
 
 #include "aux/chunk.hpp"
 #include "aux/chunk_handler_ctx.hpp"
@@ -75,7 +74,7 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
     };
 
     using Chunk = RRChunk<size_t, decltype(reader())>;
-    using ChunkProcessor = ThreadedCharChunkProcessor<decltype(generator_wrapper()), Chunk>;
+    using ChunkProcessor = ThreadedChunkProcessor<decltype(generator_wrapper()), Chunk>;
 
     std::vector<std::unique_ptr<ChunkProcessor>> workers;
     workers.reserve(processors_count);
