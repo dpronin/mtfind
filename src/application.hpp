@@ -16,19 +16,37 @@ public:
     }
 
 public:
+    class PatternValidator
+    {
+    public:
+        template<typename T>
+        bool operator()(T c) const noexcept
+        {
+            if (!has_masked_symbols_)
+                has_masked_symbols_ = '?' == c;
+            return 0 <= c && c <= 0x7E && '\n' != c && '\r' != c || '?' == c;
+        }
+
+        bool has_masked_symbols() const noexcept { return has_masked_symbols_; }
+        void reset() noexcept { has_masked_symbols_ = false; }
+
+    private:
+        mutable bool has_masked_symbols_ = false;
+    };
+
     ///
     /// @brief      The comparator for equalness for the pattern
     ///
     /// @return     The comparator
     ///
-    auto pattern_comparator() noexcept { return [](auto c, auto p){ return '?' == p || c == p; }; }
+    auto masked_pattern_comparator() const noexcept { return [](auto c, auto p){ return '?' == p || c == p; }; }
 
     ///
-    /// @brief      The validator for the application's pattern provided through arguments
+    /// @brief      Gets the validator for application's pattern provided through the arguments
     ///
     /// @return     Validator of a pattern
     ///
-    auto pattern_validator() noexcept { return [](auto c){ return 0 <= c && c <= 0x7E && '\n' != c && '\r' != c || '?' == c; }; }
+    PatternValidator pattern_validator() const noexcept { return {}; }
 
     ///
     /// @brief      Prints a help page.
