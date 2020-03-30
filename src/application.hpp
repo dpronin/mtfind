@@ -22,8 +22,7 @@ public:
         template<typename T>
         bool operator()(T c) const noexcept
         {
-            if (!has_masked_symbols_)
-                has_masked_symbols_ = '?' == c;
+            has_masked_symbols_ = has_masked_symbols_ || '?' == c;
             return 0 <= c && c <= 0x7E && '\n' != c && '\r' != c || '?' == c;
         }
 
