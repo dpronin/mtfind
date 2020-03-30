@@ -12,6 +12,8 @@
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/range/algorithm/copy.hpp>
 #include <boost/utility/string_view.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 
 #include "aux/range_splitter.hpp"
 #include "searchers/naive_searcher.hpp"
@@ -61,11 +63,34 @@ int run(boost::string_view const input_path, PatternSearcher &&searcher)
     }
     else
     {
-        // open an input_path file with its path given in argv[1] by means of mapping, opening in readonly mode
-        boost::iostreams::mapped_file_source const source_file(input_path.data());
+        boost::filesystem::path const input_file_path(input_path.data());
+
+        // check if the input file exists
+        if (!boost::filesystem::exists(input_file_path))
+        {
+            std::cerr << "error: input file " << input_file_path << " doesn't exist\n";
+            return EXIT_FAILURE;
+        }
+
+        // check if the input file is a regular file, not a directory, socket, block device, etc.
+        if (!boost::filesystem::is_regular_file(input_file_path))
+        {
+            std::cerr << "error: input file " << input_file_path << " is not regular\n";
+            return EXIT_FAILURE;
+        }
+
+        // check if the input file is empty, if it is, no processing is required
+        if (boost::filesystem::is_empty(input_file_path))
+        {
+            std::cerr << "input file " << input_file_path << " is empty\n";
+            return EXIT_SUCCESS;
+        }
+
+        // map input file provided by path input_file_path, opening performed is in readonly mode
+        boost::iostreams::mapped_file_source const source_file(input_file_path);
         if (!source_file)
         {
-            std::cerr << "error: couldn't open an input file '" << input_path << "'\n";
+            std::cerr << "error: couldn't open an input file " << input_file_path << "\n";
             return EXIT_FAILURE;
         }
         else
@@ -114,6 +139,12 @@ int main(int argc, char const *argv[]) try
         return EXIT_FAILURE;
     }
 
+    if (argc > 3)
+    {
+        for (int i = 3; i < argc; ++i)
+            std::cerr << "WARNING: redundant parameter '" << argv[i] << "' provided, skipped\n";
+    }
+
     // preserve a pattern string given in argv[2]
     boost::string_view const pattern(argv[2]);
     // check the pattern against correctness of its content by given validator
@@ -147,4 +178,3 @@ catch (...)
     std::cerr << "internal error\n";
     return EXIT_FAILURE;
 }
-
