@@ -89,12 +89,12 @@ int run(boost::string_view const input_path, PatternSearcher &&searcher)
         }
         catch (std::exception const &ex)
         {
-            std::cerr << "mapping file " << input_file_path << " failed\n";
+            std::cerr << "WARNING: mapping file " << input_file_path << " failed\n";
         }
 
         if (!mmap_source_file)
         {
-            std::cerr << "coudn't map input file " << input_file_path << " to memory\n"
+            std::cerr << "WARNING: coudn't map input file " << input_file_path << " to memory\n"
                       << "Falling back to the default slow stream-oriented variant\n";
 
             boost::filesystem::ifstream stream_source_file{input_file_path};
@@ -108,8 +108,8 @@ int run(boost::string_view const input_path, PatternSearcher &&searcher)
         }
         else
         {
-            // @info for debug perposes there has been used RR for a mapped file
-            // actually it works a little bit slower than devide and conquer in case of having SSD
+            // @info for debug purposes there has been used RR for a mapped file
+            // actually it works a little bit slower than deviding and conquering in case of having SSD
             // strat::round_robin(detail::RangeSplitter<decltype(mmap_source_file.begin())>(mmap_source_file), tokenizer, line_findings_sink)
             return strat::divide_and_conquer(mmap_source_file, tokenizer, line_findings_sink);
         }
