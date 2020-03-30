@@ -14,6 +14,7 @@
 #include <boost/utility/string_view.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 #include "aux/range_splitter.hpp"
 #include "searchers/naive_searcher.hpp"
@@ -27,10 +28,15 @@
 
 using namespace mtfind;
 
-constexpr bool kFileUseRR = false;
-
 namespace
 {
+
+template<typename...Args>
+int streamed_run(std::istream &is, Args&&...args)
+{
+    is >> std::noskipws;
+    return strat::round_robin(detail::RangeSplitter<std::istream_iterator<char>>(std::istream_iterator<char>(is), std::istream_iterator<char>()), std::forward<Args>(args)...);
+}
 
 template<typename PatternSearcher>
 int run(boost::string_view const input_path, PatternSearcher &&searcher)
@@ -50,18 +56,7 @@ int run(boost::string_view const input_path, PatternSearcher &&searcher)
 
     // input may be stdin specified as '-' or a path to a file
     auto use_stdin = [](auto &&input_path){ return input_path == "-"; };
-    if (use_stdin(input_path))
-    {
-        // synchronization cin with scanf-like functions is disabled
-        // it can be done since no scanf-like functions are used in the application
-        // it could slightly increase performance
-        std::cin.sync_with_stdio(false);
-        std::cin >> std::noskipws;
-        return strat::round_robin(detail::RangeSplitter<std::istream_iterator<char>>(std::istream_iterator<char>(std::cin), std::istream_iterator<char>()),
-            tokenizer,
-            line_findings_sink);
-    }
-    else
+    if (!use_stdin(input_path))
     {
         boost::filesystem::path const input_file_path(input_path.data());
 
@@ -86,19 +81,46 @@ int run(boost::string_view const input_path, PatternSearcher &&searcher)
             return EXIT_SUCCESS;
         }
 
-        // map input file provided by path input_file_path, opening performed is in readonly mode
-        boost::iostreams::mapped_file_source const source_file(input_file_path);
-        if (!source_file)
+        boost::iostreams::mapped_file_source mmap_source_file;
+        try
         {
-            std::cerr << "error: couldn't open an input file " << input_file_path << "\n";
-            return EXIT_FAILURE;
+            // map input file provided by path input_file_path, opening performed is in readonly mode
+            mmap_source_file.open(input_file_path);
+        }
+        catch (std::exception const &ex)
+        {
+            std::cerr << "mapping file " << input_file_path << " failed\n";
+        }
+
+        if (!mmap_source_file)
+        {
+            std::cerr << "coudn't map input file " << input_file_path << " to memory\n"
+                      << "Falling back to the default slow stream-oriented variant\n";
+
+            boost::filesystem::ifstream stream_source_file{input_file_path};
+            if (!stream_source_file)
+            {
+                std::cerr << "opening file " << input_file_path << " in stream-mode failed\n";
+                return EXIT_FAILURE;
+            }
+
+            return streamed_run(stream_source_file, tokenizer, line_findings_sink);
         }
         else
         {
-            return kFileUseRR
-                ? strat::round_robin(detail::RangeSplitter<decltype(source_file.begin())>(source_file), tokenizer, line_findings_sink)
-                : strat::divide_and_conquer(source_file, tokenizer, line_findings_sink);
+            // @info for debug perposes there has been used RR for a mapped file
+            // actually it works a little bit slower than devide and conquer in case of having SSD
+            // strat::round_robin(detail::RangeSplitter<decltype(mmap_source_file.begin())>(mmap_source_file), tokenizer, line_findings_sink)
+            return strat::divide_and_conquer(mmap_source_file, tokenizer, line_findings_sink);
         }
+    }
+    else
+    {
+        // synchronization cin with scanf-like functions is disabled
+        // it can be done since no scanf-like functions are used in the application
+        // it could slightly increase performance
+        std::cin.sync_with_stdio(false);
+        return streamed_run(std::cin, tokenizer, line_findings_sink);
     }
 }
 
