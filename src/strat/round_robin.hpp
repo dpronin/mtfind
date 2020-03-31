@@ -73,7 +73,7 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
         };
     };
 
-    using Chunk = RRChunk<size_t, decltype(reader())>;
+    using Chunk          = RRChunk<size_t, decltype(reader())>;
     using ChunkProcessor = ThreadedChunkProcessor<decltype(generator_wrapper()), Chunk>;
 
     std::vector<std::unique_ptr<ChunkProcessor>> workers;
@@ -86,8 +86,9 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
 
     auto rr_handler = [first = workers.begin(),
         last = workers.end(),
-        worker_it = workers.begin()](auto chunk_idx, auto &&value) mutable {
-            (*(*worker_it))({chunk_idx, std::move(value)});
+        worker_it = workers.begin()](auto chunk_idx, auto const &value) mutable {
+            while (!(*(*worker_it))({chunk_idx, value}))
+                ;
             ++worker_it;
             if (last == worker_it)
                 worker_it = first;

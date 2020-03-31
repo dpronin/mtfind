@@ -50,10 +50,9 @@ public:
     /// @tparam     U any type convertable to Chunk or Chunk itself
     ///
     template<typename U = Chunk>
-    void operator()(U &&chunk)
+    bool operator()(U &&chunk)
     {
-        while (!queue_.push(std::forward<U>(chunk)))
-            ;
+        return queue_.push(std::forward<U>(chunk));
     }
 
     ///

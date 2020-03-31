@@ -35,7 +35,7 @@ template<typename...Args>
 int streamed_run(std::istream &is, Args&&...args)
 {
     is >> std::noskipws;
-    return strat::round_robin(detail::RangeSplitter<std::istream_iterator<char>>(std::istream_iterator<char>(is), std::istream_iterator<char>()), std::forward<Args>(args)...);
+    return strat::round_robin(RangeSplitter<std::istream_iterator<char>>(std::istream_iterator<char>(is), std::istream_iterator<char>()), std::forward<Args>(args)...);
 }
 
 template<typename PatternSearcher>
@@ -95,7 +95,7 @@ int run(boost::string_view const input_path, PatternSearcher &&searcher)
         if (!mmap_source_file)
         {
             std::cerr << "WARNING: coudn't map input file " << input_file_path << " to memory\n"
-                      << "Falling back to the default slow stream-oriented variant\n";
+                      << "WARNING: falling back to the default slow stream-oriented variant\n";
 
             boost::filesystem::ifstream stream_source_file{input_file_path};
             if (!stream_source_file)
@@ -110,7 +110,7 @@ int run(boost::string_view const input_path, PatternSearcher &&searcher)
         {
             // @info for debug purposes there has been used RR for a mapped file
             // actually it works a little bit slower than deviding and conquering in case of having SSD
-            // strat::round_robin(detail::RangeSplitter<decltype(mmap_source_file.begin())>(mmap_source_file), tokenizer, line_findings_sink)
+            // strat::round_robin(RangeSplitter<decltype(mmap_source_file.begin())>(mmap_source_file), tokenizer, line_findings_sink)
             return strat::divide_and_conquer(mmap_source_file, tokenizer, line_findings_sink);
         }
     }

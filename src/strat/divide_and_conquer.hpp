@@ -45,7 +45,7 @@ auto generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_nu
     {
         task_generator = [] (auto first, auto last, auto handler) {
             return [=] () mutable {
-                mtfind::detail::RangeSplitter<Iterator> chunk_reader(first, last);
+                RangeSplitter<Iterator> chunk_reader(first, last);
                 size_t chunk_idx = 0;
                 // process the input file chunk by chunk
                 for (auto chunk = chunk_reader(); chunk_reader; ++chunk_idx, chunk = chunk_reader())
@@ -57,7 +57,7 @@ auto generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_nu
     {
         task_generator = [] (auto first, auto last, auto handler) {
             return [=] () mutable {
-                mtfind::detail::RangeSplitter<Iterator> chunk_reader(first, last);
+                RangeSplitter<Iterator> chunk_reader(first, last);
                 size_t chunk_idx = 0;
                 // process the input file chunk by chunk
                 for (auto chunk = chunk_reader(); chunk_reader; ++chunk_idx, chunk = chunk_reader())

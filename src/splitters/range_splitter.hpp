@@ -9,7 +9,7 @@
 
 #include "aux/iterator_concept.hpp"
 
-namespace mtfind::detail
+namespace mtfind
 {
 
 template<typename Iterator, typename = void>
@@ -18,7 +18,7 @@ class RangeSplitter
 
 template<typename Iterator>
 class RangeSplitter<Iterator,
-    typename std::enable_if<is_conv_to_forward_char_iterator<Iterator>>::type>
+    typename std::enable_if<detail::is_conv_to_forward_char_iterator<Iterator>>::type>
 {
 public:
     using iterator       = Iterator;
@@ -71,7 +71,8 @@ private:
 
 template<typename Iterator>
 class RangeSplitter<Iterator,
-    typename std::enable_if<!is_conv_to_forward_char_iterator<Iterator> && is_conv_to_input_char_iterator<Iterator>>::type>
+    typename std::enable_if<!detail::is_conv_to_forward_char_iterator<Iterator>
+        && detail::is_conv_to_input_char_iterator<Iterator>>::type>
 {
 public:
     using iterator       = Iterator;
@@ -109,4 +110,4 @@ private:
     bool     eorange_ = false;
 };
 
-} // namespace mtfind::aux
+} // namespace mtfind

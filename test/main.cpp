@@ -4,6 +4,7 @@
 #include <tuple>
 #include <vector>
 #include <functional>
+#include <thread>
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
@@ -14,6 +15,8 @@
 #include "searchers/naive_searcher.hpp"
 #include "searchers/boyer_moore_searcher.hpp"
 #include "tokenizers/range_tokenizer.hpp"
+#include "processors/multithreaded_task_processor.hpp"
+#include "processors/threaded_chunk_processor.hpp"
 
 using namespace mtfind;
 using namespace testing;
@@ -21,12 +24,20 @@ using namespace testing;
 namespace
 {
 
-TEST(RangeSplitter, SplitsStringInLines)
+template <typename T>
+struct Splitter : public Test {};
+
+using Splitters = Types<RangeSplitter<std::string::const_iterator>>;
+TYPED_TEST_CASE(Splitter, Splitters);
+
+TYPED_TEST(Splitter, SplitsStringInLines)
 {
+    using SplitterT = TypeParam;
+
     std::string const text = "line1\nline2\n\nline4\r\nline5\n";
     std::vector<std::string> const expected_lines = { "line1", "line2", "", "line4\r", "line5" };
 
-    detail::RangeSplitter<std::string::const_iterator> reader(text);
+    SplitterT reader(text);
 
     std::vector<std::string> result_lines;
     for (auto line = reader(); reader; line = reader())
@@ -35,12 +46,14 @@ TEST(RangeSplitter, SplitsStringInLines)
     EXPECT_EQ(expected_lines, result_lines);
 }
 
-TEST(RangeSplitter, SplitsStringAtWhitespaces)
+TYPED_TEST(Splitter, SplitsStringAtWhitespaces)
 {
+    using SplitterT = TypeParam;
+
     std::string const text = "Hello, my lo\tvely wor\nld!";
     std::vector<std::string> const expected_words = { "Hello,", "my", "lo\tvely", "wor\nld!" };
 
-    detail::RangeSplitter<std::string::const_iterator> reader(text, ' ');
+    SplitterT reader(text, ' ');
 
     std::vector<std::string> result_words;
     for (auto word = reader(); reader; word = reader())
@@ -181,9 +194,6 @@ TYPED_TEST(ComparatoredSearcher, FailedPatternLookupWithComparator)
     }
 }
 
-namespace
-{
-
 struct SearcherMock
 {
     using iterator = std::string::const_iterator;
@@ -194,10 +204,19 @@ struct SearcherMock
     auto operator()(iterator first, iterator last) { return search(first, last); }
 };
 
-} // anonymous namespace
+template <typename T>
+struct Tokenizer : public Test {};
 
-TEST(RangeTokenizer, Tokenizes)
+using Tokenizers = Types<
+    RangeTokenizer<std::function<boost::iterator_range<std::string::const_iterator>(
+        std::string::const_iterator, std::string::const_iterator)>>
+>;
+TYPED_TEST_CASE(Tokenizer, Tokenizers);
+
+TYPED_TEST(Tokenizer, Tokenizes)
 {
+    using TokenizerT = TypeParam;
+
     std::string const text = "London is the capital of Great Britain indeed";
     // token and its position in the input text
     std::vector<std::pair<std::string, size_t>> const exp_tokens = {
@@ -206,7 +225,7 @@ TEST(RangeTokenizer, Tokenizes)
         {"Britain", 31}
     };
 
-    // searcher performs lookups of the words separated by whitespaces ' '
+    // searcher performs lookups of the words separated by whitespaces ' ' and starting from an upper letter
     // must be called exactly expected tokens size + 1 because the last word in the text
     // does not start from an upper letter, hence the searcher will be called one more time
     // than number of words found
@@ -220,7 +239,7 @@ TEST(RangeTokenizer, Tokenizes)
     // searcher wrapper is essential because the searcher itself is uncopiable
     auto searcher_wrapper = [&searcher](auto&&...args){ return searcher(std::forward<decltype(args)>(args)...); };
 
-    RangeTokenizer<decltype(searcher_wrapper)> tokenizer(searcher_wrapper);
+    TokenizerT tokenizer(searcher_wrapper);
 
     std::vector<boost::iterator_range<std::string::const_iterator>> tokens;
     tokenizer(text, std::back_inserter(tokens));
@@ -235,7 +254,7 @@ TEST(RangeTokenizer, Tokenizes)
     }
 }
 
-TEST(RangeTokenizer, ReturnsEmptyCollection)
+TYPED_TEST(Tokenizer, ReturnsEmptyCollection)
 {
     std::string const text = "London is the capital of Great Britain indeed";
     SearcherMock searcher;
@@ -254,6 +273,68 @@ TEST(RangeTokenizer, ReturnsEmptyCollection)
     std::vector<boost::iterator_range<std::string::const_iterator>> tokens;
     tokenizer(text, std::back_inserter(tokens));
     EXPECT_TRUE(tokens.empty());
+}
+
+struct TaskMock
+{
+    MOCK_METHOD0(exec, void());
+    void operator()() { exec(); }
+};
+
+TEST(MultithreadedTaskProcessors, HandlesTasksExpectedTimes)
+{
+    size_t constexpr kCallsCount = 100;
+    MultithreadedTaskProcessor processor(std::thread::hardware_concurrency());
+
+    TaskMock task;
+    EXPECT_CALL(task, exec()).Times(Exactly(kCallsCount));
+
+    processor.run();
+    for (size_t i = 0; i < kCallsCount; ++i)
+        processor(std::ref(task));
+    processor.wait();
+}
+
+TEST(MultithreadedTaskProcessors, DoesNotHandleTaskIfNotRunning)
+{
+    MultithreadedTaskProcessor processor;
+
+    TaskMock task;
+    EXPECT_CALL(task, exec()).Times(0);
+
+    processor(std::ref(task));
+    processor.wait();
+}
+
+TEST(ThreadedChunkProcessor, HandlesTasksAsChunksExpectedTimes)
+{
+    size_t constexpr kCallsCount = 100;
+
+    TaskMock task;
+    EXPECT_CALL(task, exec()).Times(Exactly(kCallsCount));
+
+    std::function<void()> caller = [&task]{ task(); };
+    auto handler = [](std::function<void()> &&caller){ caller(); };
+
+    ThreadedChunkProcessor<decltype(handler), std::function<void()>> processor(handler);
+
+    processor.start();
+    for (size_t i = 0; i < kCallsCount; ++i)
+        processor(caller);
+    processor.stop();
+}
+
+TEST(ThreadedChunkProcessor, DoesNotHandleTaskAsChunkIfNotRunning)
+{
+    TaskMock task;
+    EXPECT_CALL(task, exec()).Times(0);
+
+    std::function<void()> caller = [&task]{ task(); };
+    auto handler = [](std::function<void()> &&caller){ caller(); };
+
+    ThreadedChunkProcessor<decltype(handler), std::function<void()>> processor(handler);
+
+    processor(caller);
 }
 
 } // anonymous namespace
