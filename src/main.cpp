@@ -95,7 +95,7 @@ int run(boost::string_view const input_path, PatternSearcher &&searcher)
         if (!mmap_source_file)
         {
             std::cerr << "WARNING: coudn't map input file " << input_file_path << " to memory\n"
-                      << "WARNING: falling back to the default slow stream-oriented variant\n";
+                      << "WARNING: falling back to the default slow stream-oriented reading mode\n";
 
             boost::filesystem::ifstream stream_source_file{input_file_path};
             if (!stream_source_file)
