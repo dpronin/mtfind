@@ -16,7 +16,7 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/fstream.hpp>
 
-#include "aux/range_splitter.hpp"
+#include "splitters/range_splitter.hpp"
 #include "searchers/naive_searcher.hpp"
 #include "searchers/boyer_moore_searcher.hpp"
 #include "tokenizers/range_tokenizer.hpp"

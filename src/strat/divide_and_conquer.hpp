@@ -18,7 +18,7 @@
 
 #include "processors/multithreaded_task_processor.hpp"
 
-#include "aux/range_splitter.hpp"
+#include "splitters/range_splitter.hpp"
 #include "aux/chunk_handler_ctx.hpp"
 #include "aux/iterator_concept.hpp"
 

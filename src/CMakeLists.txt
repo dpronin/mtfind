@@ -9,7 +9,7 @@ set(HEADERS
     strat/round_robin.hpp
     strat/divide_and_conquer.hpp
     aux/chunk.hpp
-    aux/range_splitter.hpp
+    splitters/range_splitter.hpp
     aux/chunk_handler_ctx.hpp
     aux/iterator_concept.hpp
     searchers/naive_searcher.hpp

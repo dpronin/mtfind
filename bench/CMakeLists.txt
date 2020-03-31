@@ -1,4 +1,3 @@
-find_package(Boost REQUIRED)
 find_package(Threads REQUIRED)
 
 set(SOURCES
@@ -6,7 +5,7 @@ set(SOURCES
 )
 
 set(HEADERS
-    ${MTFIND_SRC_DIR}/aux/range_splitter.hpp
+    ${MTFIND_SRC_DIR}/splitters/range_splitter.hpp
     ${MTFIND_SRC_DIR}/aux/iterator_concept.hpp
     ${MTFIND_SRC_DIR}/aux/chunk.hpp
     ${MTFIND_SRC_DIR}/aux/chunk_handler_ctx.hpp
@@ -24,6 +23,6 @@ set(CMAKE_CXX_STANDARD 14)
 add_executable(mtfind_bench ${SOURCES} ${HEADERS})
 target_include_directories(mtfind_bench PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
-target_link_libraries(mtfind_bench PRIVATE Boost::boost)
 target_link_libraries(mtfind_bench PRIVATE Threads::Threads)
+target_link_libraries(mtfind_bench PRIVATE CONAN_PKG::boost)
 target_link_libraries(mtfind_bench PRIVATE CONAN_PKG::benchmark)

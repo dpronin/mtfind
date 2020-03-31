@@ -1,4 +1,3 @@
-find_package(Boost REQUIRED)
 find_package(Threads REQUIRED)
 
 set(SOURCES
@@ -6,7 +5,7 @@ set(SOURCES
 )
 
 set(HEADERS
-    ${MTFIND_SRC_DIR}/aux/range_splitter.hpp
+    ${MTFIND_SRC_DIR}/splitters/range_splitter.hpp
     ${MTFIND_SRC_DIR}/aux/iterator_concept.hpp
     ${MTFIND_SRC_DIR}/aux/chunk.hpp
     ${MTFIND_SRC_DIR}/aux/chunk_handler_ctx.hpp
@@ -23,6 +22,6 @@ target_include_directories(mtfind_test PRIVATE ${CMAKE_CURRENT_LIST_DIR} ${MTFIN
 
 add_test(NAME GTestMtFind COMMAND mtfind_test)
 
-target_link_libraries(mtfind_test PRIVATE Boost::boost)
 target_link_libraries(mtfind_test PRIVATE Threads::Threads)
+target_link_libraries(mtfind_test PRIVATE CONAN_PKG::boost)
 target_link_libraries(mtfind_test PRIVATE CONAN_PKG::gtest)
