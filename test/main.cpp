@@ -1,15 +1,18 @@
 #include <cstddef>
+#include <cstdlib>
 
 #include <string>
 #include <tuple>
 #include <vector>
 #include <functional>
 #include <thread>
+#include <sstream>
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
 #include <boost/range/iterator_range.hpp>
+#include <boost/range/numeric.hpp>
 
 #include "splitters/range_splitter.hpp"
 #include "searchers/naive_searcher.hpp"
@@ -18,8 +21,17 @@
 #include "processors/multithreaded_task_processor.hpp"
 #include "processors/threaded_chunk_processor.hpp"
 
-using namespace mtfind;
+#include "strat/divide_and_conquer.hpp"
+#include "strat/round_robin.hpp"
+
+#include "aux/chunk.hpp"
+
+#include "lorem_ipsum.hpp"
+
 using namespace testing;
+
+namespace mtfind::test
+{
 
 namespace
 {
@@ -29,6 +41,8 @@ struct Splitter : public Test {};
 
 using Splitters = Types<RangeSplitter<std::string::const_iterator>>;
 TYPED_TEST_CASE(Splitter, Splitters);
+
+} // anonymous namespace
 
 TYPED_TEST(Splitter, SplitsStringInLines)
 {
@@ -62,11 +76,16 @@ TYPED_TEST(Splitter, SplitsStringAtWhitespaces)
     EXPECT_EQ(expected_words, result_words);
 }
 
+namespace
+{
+
 template <typename T>
 struct Searcher : public Test {};
 
 using Searchers = Types<NaiveSearcher<std::string>, BoyerMooreSearcher<std::string>>;
 TYPED_TEST_CASE(Searcher, Searchers);
+
+} // anonymous namespace
 
 TYPED_TEST(Searcher, SuccessfulPatternLookupNoComparator)
 {
@@ -114,6 +133,9 @@ TYPED_TEST(Searcher, FailedPatternLookupNoComparator)
     }
 }
 
+namespace
+{
+
 template <typename T>
 struct ComparatoredSearcher : public Test {};
 
@@ -121,6 +143,9 @@ using ComparatoredSearchers = Types<
     NaiveSearcher<std::string, std::function<bool(char, char)>>,
     BoyerMooreSearcher<std::string, std::function<bool(char, char)>>
 >;
+
+} // anonymous namespace
+
 TYPED_TEST_CASE(ComparatoredSearcher, ComparatoredSearchers);
 
 TYPED_TEST(ComparatoredSearcher, SuccessfulPatternLookupWithComparator)
@@ -194,6 +219,9 @@ TYPED_TEST(ComparatoredSearcher, FailedPatternLookupWithComparator)
     }
 }
 
+namespace
+{
+
 struct SearcherMock
 {
     using iterator = std::string::const_iterator;
@@ -211,6 +239,9 @@ using Tokenizers = Types<
     RangeTokenizer<std::function<boost::iterator_range<std::string::const_iterator>(
         std::string::const_iterator, std::string::const_iterator)>>
 >;
+
+} // anonymous namespace
+
 TYPED_TEST_CASE(Tokenizer, Tokenizers);
 
 TYPED_TEST(Tokenizer, Tokenizes)
@@ -275,11 +306,16 @@ TYPED_TEST(Tokenizer, ReturnsEmptyCollection)
     EXPECT_TRUE(tokens.empty());
 }
 
+namespace
+{
+
 struct TaskMock
 {
     MOCK_METHOD0(exec, void());
     void operator()() { exec(); }
 };
+
+} // anonymous namespace
 
 TEST(MultithreadedTaskProcessors, HandlesTasksExpectedTimes)
 {
@@ -330,14 +366,98 @@ TEST(ThreadedChunkProcessor, DoesNotHandleTaskAsChunkIfNotRunning)
     EXPECT_CALL(task, exec()).Times(0);
 
     std::function<void()> caller = [&task]{ task(); };
-    auto handler = [](std::function<void()> &&caller){ caller(); };
+    auto handler = [](auto &&caller){ caller(); };
 
     ThreadedChunkProcessor<decltype(handler), std::function<void()>> processor(handler);
 
     processor(caller);
 }
 
+namespace
+{
+
+template<typename T>
+class FindingsSink
+{
+public:
+    using Container = detail::ChunksFindings<T>;
+
+    void operator()(typename Container::value_type line_findings) noexcept { lines_findings_.push_back(std::move(line_findings)); }
+
+    auto const& lines_findings() const noexcept { return lines_findings_; }
+
+    void reset() noexcept { lines_findings_.clear(); }
+
+private:
+    Container lines_findings_;
+};
+
+class ParseLoremIpsum : public Test
+{
+public:
+    ParseLoremIpsum() : searcher_(kPattern_), tokenizer_(searcher_)
+    {}
+    ~ParseLoremIpsum() override = default;
+
+protected:
+    template<typename T>
+    void validate(FindingsSink<T> const &sink)
+    {
+        auto &lines_findings = sink.lines_findings();
+        EXPECT_EQ(lines_findings.size(), kExpLinesFindings_.size());
+        auto exp_line_it = kExpLinesFindings_.cbegin();
+        for (auto const &line_findings : lines_findings)
+        {
+            EXPECT_EQ(line_findings.first, exp_line_it->first);
+            auto exp_pos_it = exp_line_it->second.cbegin();
+            for (auto const &findings : line_findings.second)
+            {
+                EXPECT_EQ(findings.first, *exp_pos_it);
+                EXPECT_THAT(findings.second, ElementsAreArray(kPattern_));
+                ++exp_pos_it;
+            }
+            EXPECT_EQ(exp_pos_it, exp_line_it->second.cend());
+            ++exp_line_it;
+        }
+        EXPECT_EQ(exp_line_it, kExpLinesFindings_.cend());
+    }
+
+protected:
+    std::string const kPattern_ = "vitae";
+    std::vector<std::pair<size_t, std::vector<size_t>>> const kExpLinesFindings_ = {
+        { 5 , { 21      } },
+        { 6 , { 84      } },
+        { 10, {  8      } },
+        { 11, { 28, 103 } },
+        { 12, { 42      } },
+        { 17, { 32      } },
+        { 19, { 82      } },
+        { 32, { 48      } },
+        { 33, { 63      } }
+    };
+
+    BoyerMooreSearcher<decltype(kPattern_)> searcher_;
+    RangeTokenizer<decltype(searcher_)>     tokenizer_;
+};
+
 } // anonymous namespace
+
+TEST_F(ParseLoremIpsum, RoundRobin)
+{
+    RangeSplitter<decltype(std::begin(kLoremIpsum))> reader(std::begin(kLoremIpsum), std::end(kLoremIpsum), '\n');
+    FindingsSink<boost::iterator_range<const char*>> sink;
+    ASSERT_EQ(strat::round_robin(reader, tokenizer_, std::ref(sink), std::thread::hardware_concurrency()), EXIT_SUCCESS);
+    validate(sink);
+}
+
+TEST_F(ParseLoremIpsum, DivideAndConquer)
+{
+    FindingsSink<boost::string_view> sink;
+    ASSERT_EQ(strat::divide_and_conquer(kLoremIpsum, tokenizer_, std::ref(sink), std::thread::hardware_concurrency()), EXIT_SUCCESS);
+    validate(sink);
+}
+
+} // namespace mtfind::test
 
 int main(int argc, char *argv[]) {
     ::testing::InitGoogleTest(&argc, argv);

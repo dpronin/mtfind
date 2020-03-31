@@ -15,6 +15,8 @@ set(HEADERS
     ${MTFIND_SRC_DIR}/searchers/naive_searcher.hpp
     ${MTFIND_SRC_DIR}/strat/round_robin.hpp
     ${MTFIND_SRC_DIR}/strat/divide_and_conquer.hpp
+
+    lorem_ipsum.hpp
 )
 
 add_executable(mtfind_test ${SOURCES} ${HEADERS})

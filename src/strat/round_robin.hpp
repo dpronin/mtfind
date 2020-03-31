@@ -38,7 +38,7 @@ struct RRChunk
 };
 
 template<typename ChunkReader, typename ChunkHandler>
-int process_rr(ChunkReader &reader, ChunkHandler handler, bool process_empty_chunks = false)
+int process_rr(ChunkReader &&reader, ChunkHandler handler, bool process_empty_chunks = false)
 {
     // process the input file chunk by chunk
     if (process_empty_chunks)
@@ -63,7 +63,7 @@ template<typename ChunkReader, typename ChunkHandlerGenerator>
 int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t workers_count = 1, bool process_empty_chunks = false)
 {
     if (workers_count < 2)
-        return process_rr(reader, generator(), process_empty_chunks);
+        return process_rr(std::forward<ChunkReader>(reader), generator(), process_empty_chunks);
 
     auto const processors_count = workers_count - 1;
 
@@ -164,7 +164,6 @@ int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsSink fin
         // the handler will be called on each chunk by a worker
         // every worker is given a chunk and its index, which they pass to this handler
         return [tokenizer, &ctx = *ctx_it++, tokens = Container()](auto chunk_idx, auto const &chunk_value) mutable {
-
             tokenizer(chunk_value, std::back_inserter(tokens));
             if (!tokens.empty())
             {
