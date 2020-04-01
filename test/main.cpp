@@ -488,10 +488,20 @@ protected:
 
 } // anonymous namespace
 
-TEST_F(ParseLoremIpsum, RoundRobin)
+TEST_F(ParseLoremIpsum, RoundRobinWithRandomAccessRangeLoremIpsum)
 {
     RangeSplitter<decltype(std::begin(kLoremIpsum))> line_splitter(kLoremIpsum, '\n');
     FindingsSink<boost::iterator_range<const char*>> sink;
+    ASSERT_EQ(strat::round_robin(line_splitter, tokenizer_, std::ref(sink), std::thread::hardware_concurrency()), EXIT_SUCCESS);
+    validate(sink);
+}
+
+TEST_F(ParseLoremIpsum, RoundRobinWithStreamedAccessLoremIpsum)
+{
+    std::istringstream iss(kLoremIpsum);
+    iss >> std::noskipws;
+    StreamSplitter line_splitter(iss, '\n');
+    FindingsSink<std::string> sink;
     ASSERT_EQ(strat::round_robin(line_splitter, tokenizer_, std::ref(sink), std::thread::hardware_concurrency()), EXIT_SUCCESS);
     validate(sink);
 }

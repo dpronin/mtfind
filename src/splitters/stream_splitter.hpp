@@ -16,6 +16,7 @@ public:
 
     auto operator()()
     {
+        // @info you can use std::getline here instead of using Range-based splitter
         std::string token;
         splitter_(std::back_inserter(token));
         return token;
