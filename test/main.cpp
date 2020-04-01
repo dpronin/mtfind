@@ -55,6 +55,7 @@ TYPED_TEST(RangeSplitterTest, SplitsStringInLines)
     SplitterT line_splitter(text, '\n');
 
     std::vector<std::string> result_lines;
+    result_lines.reserve(expected_lines.size());
     for (auto line = line_splitter(); line_splitter; line = line_splitter())
         result_lines.push_back({line.begin(), line.end()});
 
@@ -71,6 +72,7 @@ TYPED_TEST(RangeSplitterTest, SplitsStringAtWhitespaces)
     SplitterT wsp_word_splitter(text, ' ');
 
     std::vector<std::string> result_words;
+    result_words.reserve(expected_words.size());
     for (auto word = wsp_word_splitter(); wsp_word_splitter; word = wsp_word_splitter())
         result_words.push_back({word.begin(), word.end()});
 
