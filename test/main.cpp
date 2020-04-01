@@ -130,7 +130,7 @@ TYPED_TEST(Searcher, SuccessfulPatternLookupNoComparator)
         { "Look up a pattern in this text", "pattern",                10                         },
         { "Find\n\t\tme\nhere!",            "me",                     7                          },
         { "uuuuuu uuuuuuuuuuut",            "t",                      18                         },
-        { "abcdeafgh",                      "af",                     5                          },
+        { "abcbeafcb",                      "afcb",                   5                          },
     };
 
     for (auto const &record : records)
@@ -154,7 +154,7 @@ TYPED_TEST(Searcher, FailedPatternLookupNoComparator)
         { "Look up a pattern in this text","unfound",             },
         { "Find\n\t\tme\nhere!",           "\r",                  },
         { "uuuuuu uuuuuuuuuuuj",           "m",                   },
-        { "abcdeafgh",                     "ah",                  },
+        { "abcbeafeb",                     "afcb",                },
     };
 
     for (auto const &record : records)
