@@ -53,9 +53,9 @@ public:
         while (pattern_.size() <= std::distance(first, last))
         {
             auto pat_rit = pattern_.rbegin();
-            auto txt_it = std::next(first, pattern_.size() - 1);
+            auto txt_it = std::make_reverse_iterator(std::next(first, pattern_.size()));
 
-            for (; pattern_.rend() != pat_rit && comp_(*txt_it, *pat_rit); ++pat_rit, --txt_it)
+            for (; pattern_.rend() != pat_rit && comp_(*txt_it, *pat_rit); ++pat_rit, ++txt_it)
                 ;
 
             if (pattern_.rend() != pat_rit)
@@ -132,9 +132,9 @@ public:
         while (pattern_.size() <= std::distance(first, last))
         {
             auto pat_rit = pattern_.rbegin();
-            auto txt_it = std::next(first, pattern_.size() - 1);
+            auto txt_it = std::make_reverse_iterator(std::next(first, pattern_.size()));
 
-            for (; pattern_.rend() != pat_rit && *txt_it == *pat_rit; ++pat_rit, --txt_it)
+            for (; pattern_.rend() != pat_rit && *txt_it == *pat_rit; ++pat_rit, ++txt_it)
                 ;
 
             if (pattern_.rend() != pat_rit)

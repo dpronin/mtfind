@@ -34,16 +34,11 @@ using namespace testing;
 namespace mtfind::test
 {
 
-namespace
-{
-
 template <typename T>
 struct RangeSplitterTest : public Test {};
 
 using RangeSplitters = Types<RangeSplitter<std::string::const_iterator>>;
 TYPED_TEST_CASE(RangeSplitterTest, RangeSplitters);
-
-} // anonymous namespace
 
 TYPED_TEST(RangeSplitterTest, SplitsStringInLines)
 {
@@ -79,16 +74,11 @@ TYPED_TEST(RangeSplitterTest, SplitsStringAtWhitespaces)
     EXPECT_EQ(expected_words, result_words);
 }
 
-namespace
-{
-
 template <typename T>
 struct StreamSplitterTest : public Test {};
 
 using StreamSplitters = Types<StreamSplitter>;
 TYPED_TEST_CASE(StreamSplitterTest, StreamSplitters);
-
-} // anonymous namespace
 
 TYPED_TEST(StreamSplitterTest, SplitsStringStreamInLines)
 {
@@ -124,16 +114,11 @@ TYPED_TEST(StreamSplitterTest, SplitsStringStreamAtWhitespaces)
     EXPECT_EQ(expected_words, result_words);
 }
 
-namespace
-{
-
 template <typename T>
 struct Searcher : public Test {};
 
 using Searchers = Types<NaiveSearcher<std::string>, BoyerMooreSearcher<std::string>>;
 TYPED_TEST_CASE(Searcher, Searchers);
-
-} // anonymous namespace
 
 TYPED_TEST(Searcher, SuccessfulPatternLookupNoComparator)
 {
@@ -181,9 +166,6 @@ TYPED_TEST(Searcher, FailedPatternLookupNoComparator)
     }
 }
 
-namespace
-{
-
 template <typename T>
 struct ComparatoredSearcher : public Test {};
 
@@ -191,9 +173,6 @@ using ComparatoredSearchers = Types<
     NaiveSearcher<std::string, std::function<bool(char, char)>>,
     BoyerMooreSearcher<std::string, std::function<bool(char, char)>>
 >;
-
-} // anonymous namespace
-
 TYPED_TEST_CASE(ComparatoredSearcher, ComparatoredSearchers);
 
 TYPED_TEST(ComparatoredSearcher, SuccessfulPatternLookupWithComparator)
@@ -267,9 +246,6 @@ TYPED_TEST(ComparatoredSearcher, FailedPatternLookupWithComparator)
     }
 }
 
-namespace
-{
-
 struct SearcherMock
 {
     using iterator = std::string::const_iterator;
@@ -287,9 +263,6 @@ using Tokenizers = Types<
     RangeTokenizer<std::function<boost::iterator_range<std::string::const_iterator>(
         std::string::const_iterator, std::string::const_iterator)>>
 >;
-
-} // anonymous namespace
-
 TYPED_TEST_CASE(Tokenizer, Tokenizers);
 
 TYPED_TEST(Tokenizer, Tokenizes)
@@ -354,16 +327,11 @@ TYPED_TEST(Tokenizer, ReturnsEmptyCollection)
     EXPECT_TRUE(tokens.empty());
 }
 
-namespace
-{
-
 struct TaskMock
 {
     MOCK_METHOD0(exec, void());
     void operator()() { exec(); }
 };
-
-} // anonymous namespace
 
 TEST(MultithreadedTaskProcessors, HandlesTasksExpectedTimes)
 {
@@ -420,9 +388,6 @@ TEST(ThreadedChunkProcessor, DoesNotHandleTaskAsChunkIfNotRunning)
 
     processor(caller);
 }
-
-namespace
-{
 
 template<typename T>
 class FindingsSink
@@ -487,8 +452,6 @@ protected:
     BoyerMooreSearcher<decltype(kPattern_)> searcher_;
     RangeTokenizer<decltype(searcher_)>     tokenizer_;
 };
-
-} // anonymous namespace
 
 TEST_F(ParseLoremIpsum, RoundRobinWithRandomAccessRangeLoremIpsum)
 {
