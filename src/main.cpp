@@ -16,6 +16,7 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/fstream.hpp>
 
+#include "splitters/stream_splitter.hpp"
 #include "splitters/range_splitter.hpp"
 #include "searchers/naive_searcher.hpp"
 #include "searchers/boyer_moore_searcher.hpp"
@@ -35,7 +36,7 @@ template<typename...Args>
 int streamed_run(std::istream &is, Args&&...args)
 {
     is >> std::noskipws;
-    return strat::round_robin(RangeSplitter<std::istream_iterator<char>>(std::istream_iterator<char>(is), std::istream_iterator<char>()), std::forward<Args>(args)...);
+    return strat::round_robin(StreamSplitter(is, '\n'), std::forward<Args>(args)...);
 }
 
 template<typename PatternSearcher>
@@ -110,7 +111,7 @@ int run(boost::string_view const input_path, PatternSearcher &&searcher)
         {
             // @info for debug purposes there has been used RR for a mapped file
             // actually it works a little bit slower than deviding and conquering in case of having SSD
-            // strat::round_robin(RangeSplitter<decltype(mmap_source_file.begin())>(mmap_source_file), tokenizer, line_findings_sink)
+            // strat::round_robin(RangeSplitter<decltype(mmap_source_file.begin())>(mmap_source_file, '\n'), tokenizer, line_findings_sink)
             return strat::divide_and_conquer(mmap_source_file, tokenizer, line_findings_sink);
         }
     }

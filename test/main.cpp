@@ -15,6 +15,7 @@
 #include <boost/range/numeric.hpp>
 
 #include "splitters/range_splitter.hpp"
+#include "splitters/stream_splitter.hpp"
 #include "searchers/naive_searcher.hpp"
 #include "searchers/boyer_moore_searcher.hpp"
 #include "tokenizers/range_tokenizer.hpp"
@@ -37,40 +38,85 @@ namespace
 {
 
 template <typename T>
-struct Splitter : public Test {};
+struct RangeSplitterTest : public Test {};
 
-using Splitters = Types<RangeSplitter<std::string::const_iterator>>;
-TYPED_TEST_CASE(Splitter, Splitters);
+using RangeSplitters = Types<RangeSplitter<std::string::const_iterator>>;
+TYPED_TEST_CASE(RangeSplitterTest, RangeSplitters);
 
 } // anonymous namespace
 
-TYPED_TEST(Splitter, SplitsStringInLines)
+TYPED_TEST(RangeSplitterTest, SplitsStringInLines)
 {
     using SplitterT = TypeParam;
 
     std::string const text = "line1\nline2\n\nline4\r\nline5\n";
     std::vector<std::string> const expected_lines = { "line1", "line2", "", "line4\r", "line5" };
 
-    SplitterT reader(text);
+    SplitterT line_splitter(text, '\n');
 
     std::vector<std::string> result_lines;
-    for (auto line = reader(); reader; line = reader())
+    for (auto line = line_splitter(); line_splitter; line = line_splitter())
         result_lines.push_back({line.begin(), line.end()});
 
     EXPECT_EQ(expected_lines, result_lines);
 }
 
-TYPED_TEST(Splitter, SplitsStringAtWhitespaces)
+TYPED_TEST(RangeSplitterTest, SplitsStringAtWhitespaces)
 {
     using SplitterT = TypeParam;
 
     std::string const text = "Hello, my lo\tvely wor\nld!";
     std::vector<std::string> const expected_words = { "Hello,", "my", "lo\tvely", "wor\nld!" };
 
-    SplitterT reader(text, ' ');
+    SplitterT wsp_word_splitter(text, ' ');
 
     std::vector<std::string> result_words;
-    for (auto word = reader(); reader; word = reader())
+    for (auto word = wsp_word_splitter(); wsp_word_splitter; word = wsp_word_splitter())
+        result_words.push_back({word.begin(), word.end()});
+
+    EXPECT_EQ(expected_words, result_words);
+}
+
+namespace
+{
+
+template <typename T>
+struct StreamSplitterTest : public Test {};
+
+using StreamSplitters = Types<StreamSplitter>;
+TYPED_TEST_CASE(StreamSplitterTest, StreamSplitters);
+
+} // anonymous namespace
+
+TYPED_TEST(StreamSplitterTest, SplitsStringStreamInLines)
+{
+    using SplitterT = TypeParam;
+
+    std::istringstream iss("line1\nline2\n\nline4\r\nline5\n");
+    iss >> std::noskipws;
+    std::vector<std::string> const expected_lines = { "line1", "line2", "", "line4\r", "line5" };
+
+    SplitterT line_splitter(iss, '\n');
+
+    std::vector<std::string> result_lines;
+    for (auto line = line_splitter(); line_splitter; line = line_splitter())
+        result_lines.push_back({line.begin(), line.end()});
+
+    EXPECT_EQ(expected_lines, result_lines);
+}
+
+TYPED_TEST(StreamSplitterTest, SplitsStringStreamAtWhitespaces)
+{
+    using SplitterT = TypeParam;
+
+    std::istringstream iss("Hello, my lo\tvely wor\nld!");
+    iss >> std::noskipws;
+    std::vector<std::string> const expected_words = { "Hello,", "my", "lo\tvely", "wor\nld!" };
+
+    SplitterT wsp_word_splitter(iss, ' ');
+
+    std::vector<std::string> result_words;
+    for (auto word = wsp_word_splitter(); wsp_word_splitter; word = wsp_word_splitter())
         result_words.push_back({word.begin(), word.end()});
 
     EXPECT_EQ(expected_words, result_words);
@@ -444,9 +490,9 @@ protected:
 
 TEST_F(ParseLoremIpsum, RoundRobin)
 {
-    RangeSplitter<decltype(std::begin(kLoremIpsum))> reader(std::begin(kLoremIpsum), std::end(kLoremIpsum), '\n');
+    RangeSplitter<decltype(std::begin(kLoremIpsum))> line_splitter(kLoremIpsum, '\n');
     FindingsSink<boost::iterator_range<const char*>> sink;
-    ASSERT_EQ(strat::round_robin(reader, tokenizer_, std::ref(sink), std::thread::hardware_concurrency()), EXIT_SUCCESS);
+    ASSERT_EQ(strat::round_robin(line_splitter, tokenizer_, std::ref(sink), std::thread::hardware_concurrency()), EXIT_SUCCESS);
     validate(sink);
 }
 

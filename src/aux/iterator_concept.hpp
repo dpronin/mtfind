@@ -15,13 +15,11 @@ constexpr bool is_random_access_char_iterator =
     && is_char_iterator<Iterator>;
 
 template<typename Iterator>
-constexpr bool is_conv_to_forward_char_iterator =
-    std::is_convertible< typename std::iterator_traits<Iterator>::iterator_category, std::forward_iterator_tag>::value
-    && is_char_iterator<Iterator>;
+constexpr bool is_conv_to_forward_iterator =
+    std::is_convertible< typename std::iterator_traits<Iterator>::iterator_category, std::forward_iterator_tag>::value;
 
 template<typename Iterator>
-constexpr bool is_conv_to_input_char_iterator =
-    std::is_convertible< typename std::iterator_traits<Iterator>::iterator_category, std::input_iterator_tag>::value
-    && is_char_iterator<Iterator>;
+constexpr bool is_conv_to_input_iterator =
+    std::is_convertible< typename std::iterator_traits<Iterator>::iterator_category, std::input_iterator_tag>::value;
 
 } // namespace mtfind

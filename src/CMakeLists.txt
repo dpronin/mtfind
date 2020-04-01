@@ -6,17 +6,18 @@ set(SOURCES
 
 set(HEADERS
     application.hpp
-    strat/round_robin.hpp
-    strat/divide_and_conquer.hpp
     aux/chunk.hpp
-    splitters/range_splitter.hpp
     aux/chunk_handler_ctx.hpp
     aux/iterator_concept.hpp
-    searchers/naive_searcher.hpp
-    searchers/boyer_moore_searcher.hpp
-    tokenizers/range_tokenizer.hpp
+    splitters/stream_splitter.hpp
     processors/multithreaded_task_processor.hpp
     processors/threaded_chunk_processor.hpp
+    searchers/boyer_moore_searcher.hpp
+    searchers/naive_searcher.hpp
+    splitters/range_splitter.hpp
+    strat/divide_and_conquer.hpp
+    strat/round_robin.hpp
+    tokenizers/range_tokenizer.hpp
 )
 
 add_executable(mtfind ${SOURCES} ${HEADERS})

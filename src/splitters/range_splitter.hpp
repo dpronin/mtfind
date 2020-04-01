@@ -18,22 +18,23 @@ class RangeSplitter
 
 template<typename Iterator>
 class RangeSplitter<Iterator,
-    typename std::enable_if<detail::is_conv_to_forward_char_iterator<Iterator>>::type>
+    typename std::enable_if<detail::is_conv_to_forward_iterator<Iterator>>::type>
 {
 public:
     using iterator       = Iterator;
     using const_iterator = Iterator;
+    using value_type     = typename std::iterator_traits<iterator>::value_type;
 
     template<typename Range>
-    explicit RangeSplitter(Range const &source_range, char delim = '\n')
-        : RangeSplitter(source_range.begin(), source_range.end(), delim)
+    explicit RangeSplitter(Range const &source_range, value_type delim = value_type())
+        : RangeSplitter(std::begin(source_range), std::end(source_range), std::move(delim))
     {}
 
-    explicit RangeSplitter(Iterator first, Iterator last, char delim = '\n')
+    explicit RangeSplitter(Iterator first, Iterator last, value_type delim = value_type())
         : first_(first)
         , last_(last)
         , current_pos_(first_)
-        , delim_(delim)
+        , delim_(std::move(delim))
     {}
 
     auto operator()() noexcept
@@ -71,31 +72,35 @@ private:
 
 template<typename Iterator>
 class RangeSplitter<Iterator,
-    typename std::enable_if<!detail::is_conv_to_forward_char_iterator<Iterator>
-        && detail::is_conv_to_input_char_iterator<Iterator>>::type>
+    typename std::enable_if<!detail::is_conv_to_forward_iterator<Iterator>
+        && detail::is_conv_to_input_iterator<Iterator>>::type>
 {
 public:
     using iterator       = Iterator;
     using const_iterator = Iterator;
+    using value_type     = typename std::iterator_traits<iterator>::value_type;
 
-    explicit RangeSplitter(Iterator first, Iterator last, char delim = '\n')
+    explicit RangeSplitter(Iterator first, Iterator last, value_type delim = value_type())
         : first_(first)
         , last_(last)
-        , delim_(delim)
+        , delim_(std::move(delim))
     {}
 
-    auto operator()() noexcept
+    template<typename OutputIt>
+    void operator()(OutputIt out) noexcept
     {
-        std::string token;
         eorange_ = last_ == first_;
         if (!eorange_)
         {
             while (first_ != last_ && *first_ != delim_)
-                token.push_back(*first_++);
+            {
+                *out = std::move(*first_);
+                ++first_;
+                ++out;
+            }
             if (first_ != last_)
                 ++first_;
         }
-        return token;
     }
 
     operator bool() const noexcept { return !eorange(); }
