@@ -110,10 +110,10 @@ public:
     ///
     explicit BoyerMooreSearcher(Pattern pattern) noexcept : pattern_(pattern)
     {
-        pattern_distances_.fill(-1);
+        pattern_offsets_.fill(-1);
         // Fill distances to the last occurrence of the characters
         for (int_fast32_t i = 0; i < pattern_.size(); i++)
-            pattern_distances_[pattern_[i]] = i;
+            pattern_offsets_[pattern_[i]] = i;
     }
 
     ///
@@ -139,8 +139,9 @@ public:
 
             if (pattern_.rend() != pat_rit)
             {
-                first = std::next(first, std::max(static_cast<int_fast32_t>(1),
-                    std::distance(pat_rit, pattern_.rend()) - pattern_distances_[*txt_it] - 1));
+                auto offset = std::distance(pat_rit, pattern_.rend()) - 1;
+                offset -= offset > pattern_offsets_[*txt_it] ? pattern_offsets_[*txt_it] : -1;
+                first = std::next(first, offset);
             }
             else
             {
@@ -166,7 +167,7 @@ private:
     static constexpr size_t  kMaxChars = 256;
 
     Pattern                  pattern_;
-    std::array<int_fast32_t, kMaxChars> pattern_distances_;
+    std::array<int_fast32_t, kMaxChars> pattern_offsets_;
 };
 
 } // namespace mtfind
