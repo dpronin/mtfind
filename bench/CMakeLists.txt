@@ -19,10 +19,8 @@ set(HEADERS
     ${MTFIND_SRC_DIR}/tokenizers/range_tokenizer.hpp
 )
 
-set(CMAKE_CXX_STANDARD 14)
-
 add_executable(mtfind_bench ${SOURCES} ${HEADERS})
-target_include_directories(mtfind_bench PRIVATE ${CMAKE_CURRENT_LIST_DIR})
+target_include_directories(mtfind_bench PRIVATE ${CMAKE_CURRENT_LIST_DIR} ${MTFIND_SRC_DIR})
 
 target_link_libraries(mtfind_bench PRIVATE Threads::Threads)
 target_link_libraries(mtfind_bench PRIVATE CONAN_PKG::boost)
