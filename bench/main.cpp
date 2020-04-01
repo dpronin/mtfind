@@ -34,7 +34,7 @@ void BM_RangeSplitter_Lines(benchmark::State& state) {
 
     state.SetItemsProcessed(state.iterations() * lines_number);
     state.SetBytesProcessed(state.iterations() * text.size());
-    state.SetComplexityN(text.size());
+    state.SetComplexityN(lines_number);
 }
 BENCHMARK_TEMPLATE(BM_RangeSplitter_Lines, RangeSplitter<std::string::const_iterator>)
     ->RangeMultiplier(10)->Range(1000, 10000000)
