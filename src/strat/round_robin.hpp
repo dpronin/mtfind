@@ -89,11 +89,9 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
     auto rr_handler = [&processors, cur_proc = processors.begin()] (auto chunk_idx, auto const &value) mutable {
         while (!(*cur_proc)({chunk_idx, value}))
             ;
-        {
-            ++cur_proc;
-            if (processors.end() == cur_proc)
-                cur_proc = processors.begin();
-        }
+        ++cur_proc;
+        if (processors.end() == cur_proc)
+            cur_proc = processors.begin();
     };
 
     // start chunk processors up
