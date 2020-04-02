@@ -188,7 +188,7 @@ int main(int argc, char const *argv[]) try
     }
     else
     {
-        return run(argv[1], BoyerMooreSearcher<decltype(pattern)>(pattern));
+        return run(argv[1], BoyerMooreSearcher<decltype(pattern), searchers::Boosted>(pattern));
     }
 }
 catch (std::exception const &ex)

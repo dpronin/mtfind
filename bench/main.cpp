@@ -144,6 +144,11 @@ BENCHMARK_TEMPLATE(BM_Searcher_NoComp_LoremIpsum, BoyerMooreSearcher<std::string
     ->Unit(kMillisecond)
     ->Complexity();
 
+BENCHMARK_TEMPLATE(BM_Searcher_NoComp_LoremIpsum, BoyerMooreSearcher<std::string, searchers::Boosted>)
+    ->RangeMultiplier(10)->Range(1000, 1000000)
+    ->Unit(kMillisecond)
+    ->Complexity();
+
 BENCHMARK_TEMPLATE(BM_Searcher_WithComp_LoremIpsum, NaiveSearcher<std::string, decltype(bm_pattern_comparator())>)
     ->RangeMultiplier(10)->Range(1000, 1000000)
     ->Unit(kMillisecond)

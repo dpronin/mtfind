@@ -9,9 +9,12 @@
 #include <array>
 
 #include <boost/range/iterator_range.hpp>
+#include <boost/algorithm/searching/boyer_moore.hpp>
 
 namespace mtfind
 {
+
+namespace searchers { struct Boosted {}; } // namespace searchers
 
 ///
 /// @brief      Searcher class that uses a pattern and a comparator given
@@ -50,26 +53,27 @@ public:
     template<typename BidirIterator>
     auto operator()(BidirIterator first, BidirIterator last) const noexcept
     {
+        if (std::begin(pattern_) == std::end(pattern_))
+            return boost::make_iterator_range(first, first);
+
         while (pattern_.size() <= std::distance(first, last))
         {
-            auto pat_rit = pattern_.rbegin();
-            auto txt_it = std::make_reverse_iterator(std::next(first, pattern_.size()));
-
-            for (; pattern_.rend() != pat_rit && comp_(*txt_it, *pat_rit); ++pat_rit, ++txt_it)
-                ;
-
-            if (pattern_.rend() != pat_rit)
+            auto end_range = std::next(first, pattern_.size());
+            // need to reverse parameters of the comparator since the latter expects them in reversed order
+            auto mism = std::mismatch(pattern_.rbegin(), pattern_.rend(), std::make_reverse_iterator(end_range), [&](auto p, auto c){ return comp_(c, p); });
+            if (pattern_.rend() != mism.first)
             {
-                auto pat_rit2 = std::next(pat_rit);
-                while (pattern_.rend() != pat_rit2 && !comp_(*txt_it, *pat_rit2))
+                auto pat_rit2 = std::next(mism.first);
+                while (pattern_.rend() != pat_rit2 && !comp_(*mism.second, *pat_rit2))
                     ++pat_rit2;
-                first = std::next(first, std::distance(pat_rit, pat_rit2));
+                first = std::next(first, std::distance(mism.first, pat_rit2));
             }
             else
             {
-                return boost::make_iterator_range(first, std::next(first, pattern_.size()));
+                return boost::make_iterator_range(first, end_range);
             }
         }
+
         return boost::make_iterator_range(last, last);
     }
 
@@ -129,25 +133,25 @@ public:
     template<typename BidirIterator>
     auto operator()(BidirIterator first, BidirIterator last) const noexcept
     {
+        if (std::begin(pattern_) == std::end(pattern_))
+            return boost::make_iterator_range(first, first);
+
         while (pattern_.size() <= std::distance(first, last))
         {
-            auto pat_rit = pattern_.rbegin();
-            auto txt_it = std::make_reverse_iterator(std::next(first, pattern_.size()));
-
-            for (; pattern_.rend() != pat_rit && *txt_it == *pat_rit; ++pat_rit, ++txt_it)
-                ;
-
-            if (pattern_.rend() != pat_rit)
+            auto end_range = std::next(first, pattern_.size());
+            auto mism = std::mismatch(pattern_.rbegin(), pattern_.rend(), std::make_reverse_iterator(end_range));
+            if (pattern_.rend() != mism.first)
             {
-                auto offset = std::distance(pat_rit, pattern_.rend()) - 1;
-                offset -= offset > pattern_offsets_[*txt_it] ? pattern_offsets_[*txt_it] : -1;
-                first = std::next(first, offset);
+                auto const offset = std::distance(mism.first, pattern_.rend()) - 1;
+                auto const pat_offset = pattern_offsets_[*mism.second];
+                first = std::next(first, offset - (offset > pat_offset ? pat_offset : -1));
             }
             else
             {
-                return boost::make_iterator_range(first, std::next(first, pattern_.size()));
+                return boost::make_iterator_range(first, end_range);
             }
         }
+
         return boost::make_iterator_range(last, last);
     }
 
@@ -166,8 +170,31 @@ public:
 private:
     static constexpr size_t  kMaxChars = 256;
 
-    Pattern                  pattern_;
+    Pattern                             pattern_;
     std::array<int_fast32_t, kMaxChars> pattern_offsets_;
+};
+
+
+template<typename Pattern>
+class BoyerMooreSearcher<Pattern, searchers::Boosted>
+{
+public:
+    explicit BoyerMooreSearcher(Pattern pattern) : pattern_(pattern) , searcher_(std::begin(pattern_), std::end(pattern_))
+    {}
+
+    template<typename BidirIterator>
+    auto operator()(BidirIterator first, BidirIterator last) const noexcept
+    {
+        auto match = searcher_(first, last);
+        return boost::make_iterator_range(match.first, match.second);
+    }
+
+    template<typename Range>
+    auto operator()(Range const &input) const noexcept { return (*this)(std::begin(input), std::end(input)); }
+
+private:
+    Pattern                                                       pattern_;
+    boost::algorithm::boyer_moore<decltype(std::begin(pattern_))> searcher_;
 };
 
 } // namespace mtfind
