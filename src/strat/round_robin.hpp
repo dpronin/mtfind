@@ -62,6 +62,7 @@ int process_rr(ChunkReader &&reader, ChunkHandler handler, bool process_empty_ch
 template<typename ChunkReader, typename ChunkHandlerGenerator>
 int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t workers_count = 1, bool process_empty_chunks = false)
 {
+    // one threaded case of solving
     if (workers_count < 2)
         return process_rr(std::forward<ChunkReader>(reader), generator(), process_empty_chunks);
 
@@ -139,9 +140,9 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
 /// @param[in]  findings_sink  A sink for chunk findings
 /// @param[in]  workers_count  A number of threads to use
 ///
-/// @tparam     ChunkReader    A reader that will fetch a chunk until reader's source is depleted
-/// @tparam     ChunkTokenizer A functor like tokenizer for a chunk
-/// @tparam     FindingsSink   A functor-like sink type
+/// @tparam     ChunkReader    A reader that will be fetching a chunk until reader's source has depleted
+/// @tparam     ChunkTokenizer A functor like tokenizer for a chunk fetched
+/// @tparam     FindingsSink   A functor-like sink type for a chunk finding
 ///
 /// @return     0 in case of success, any other values otherwise
 ///

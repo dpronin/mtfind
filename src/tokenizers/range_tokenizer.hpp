@@ -27,11 +27,11 @@ public:
     /// @param[in]  last       The end of the range to parse
     /// @param[in]  out        The output iterator to store token results from the searcher
     ///
-    /// @tparam     InputIt    Input iterator
+    /// @tparam     RangeIt    Range iterator
     /// @tparam     OutputIt   Output iterator
     ///
-    template<typename InputIt, typename OutputIt>
-    void operator()(InputIt first, InputIt last, OutputIt out)
+    template<typename RangeIt, typename OutputIt>
+    void operator()(RangeIt first, RangeIt last, OutputIt out)
     {
         for (; first != last; ++out)
         {

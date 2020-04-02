@@ -85,7 +85,7 @@ int run(boost::string_view const input_path, PatternSearcher &&searcher)
         boost::iostreams::mapped_file_source mmap_source_file;
         try
         {
-            // map input file provided by path input_file_path, opening performed is in readonly mode
+            // map input file provided by path input_file_path, opening is performed in readonly mode
             mmap_source_file.open(input_file_path);
         }
         catch (std::exception const &ex)
