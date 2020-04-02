@@ -4,24 +4,18 @@
 
 #include <utility>
 #include <vector>
+#include <tuple>
 
 namespace mtfind::detail
 {
 
-using pos_t          = size_t;
+using chunk_idx_t = size_t;
+using pos_t       = size_t;
 
 template<typename Value>
-using Finding        = std::pair<pos_t, Value>;
+using ChunkFinding   = std::tuple<chunk_idx_t, pos_t, Value>;
 
 template<typename Value>
-using Findings       = std::vector<Finding<Value>>;
-
-using chunk_idx_t    = size_t;
-
-template<typename Value>
-using ChunkFindings  = std::pair<chunk_idx_t, Findings<Value>>;
-
-template<typename Value>
-using ChunksFindings = std::vector<ChunkFindings<Value>>;
+using ChunksFindings = std::vector<ChunkFinding<Value>>;
 
 } // namespace mtfind

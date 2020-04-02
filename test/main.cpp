@@ -117,7 +117,11 @@ TYPED_TEST(StreamSplitterTest, SplitsStringStreamAtWhitespaces)
 template <typename T>
 struct Searcher : public Test {};
 
-using Searchers = Types<NaiveSearcher<std::string>, BoyerMooreSearcher<std::string>>;
+using Searchers = Types<
+    NaiveSearcher<std::string>,
+    BoyerMooreSearcher<std::string>,
+    BoyerMooreSearcher<std::string, searchers::Boosted>
+>;
 TYPED_TEST_CASE(Searcher, Searchers);
 
 TYPED_TEST(Searcher, SuccessfulPatternLookupNoComparator)
@@ -391,20 +395,21 @@ TEST(ThreadedChunkProcessor, DoesNotHandleTaskAsChunkIfNotRunning)
     processor(caller);
 }
 
-template<typename T>
+template<typename ValueType>
 class FindingsSink
 {
 public:
-    using Container = detail::ChunksFindings<T>;
+    using Container = detail::ChunksFindings<ValueType>;
 
-    void operator()(typename Container::value_type line_findings) noexcept { lines_findings_.push_back(std::move(line_findings)); }
+    void operator()(typename Container::value_type finding)
+    {
+        findings_.push_back(std::move(finding));
+    }
 
-    auto const& lines_findings() const noexcept { return lines_findings_; }
-
-    void reset() noexcept { lines_findings_.clear(); }
+    auto const& findings() const noexcept { return findings_; }
 
 private:
-    Container lines_findings_;
+    Container findings_;
 };
 
 class ParseLoremIpsum : public Test
@@ -418,20 +423,13 @@ protected:
     template<typename T>
     void validate(FindingsSink<T> const &sink)
     {
-        auto &lines_findings = sink.lines_findings();
-        EXPECT_EQ(lines_findings.size(), kExpLinesFindings_.size());
+        auto const &findings = sink.findings();
         auto exp_line_it = kExpLinesFindings_.cbegin();
-        for (auto const &line_findings : lines_findings)
+        for (auto const &finding : findings)
         {
-            EXPECT_EQ(line_findings.first, exp_line_it->first);
-            auto exp_pos_it = exp_line_it->second.cbegin();
-            for (auto const &findings : line_findings.second)
-            {
-                EXPECT_EQ(findings.first, *exp_pos_it);
-                EXPECT_THAT(findings.second, ElementsAreArray(kPattern_));
-                ++exp_pos_it;
-            }
-            EXPECT_EQ(exp_pos_it, exp_line_it->second.cend());
+            EXPECT_EQ(std::get<0>(finding), exp_line_it->first);
+            EXPECT_EQ(std::get<1>(finding), exp_line_it->second);
+            EXPECT_THAT(std::get<2>(finding), ElementsAreArray(kPattern_));
             ++exp_line_it;
         }
         EXPECT_EQ(exp_line_it, kExpLinesFindings_.cend());
@@ -439,16 +437,17 @@ protected:
 
 protected:
     std::string const kPattern_ = "vitae";
-    std::vector<std::pair<size_t, std::vector<size_t>>> const kExpLinesFindings_ = {
-        { 5 , { 21      } },
-        { 6 , { 84      } },
-        { 10, {  8      } },
-        { 11, { 28, 103 } },
-        { 12, { 42      } },
-        { 17, { 32      } },
-        { 19, { 82      } },
-        { 32, { 48      } },
-        { 33, { 63      } }
+    std::vector<std::pair<size_t, size_t>> const kExpLinesFindings_ = {
+        { 5 ,  21  },
+        { 6 ,  84  },
+        { 10,   8  },
+        { 11,  28, },
+        { 11, 103, },
+        { 12,  42  },
+        { 17,  32  },
+        { 19,  82  },
+        { 32,  48  },
+        { 33,  63  }
     };
 
     BoyerMooreSearcher<decltype(kPattern_)> searcher_;
@@ -475,7 +474,7 @@ TEST_F(ParseLoremIpsum, RoundRobinWithStreamedAccessLoremIpsum)
 
 TEST_F(ParseLoremIpsum, DivideAndConquer)
 {
-    FindingsSink<boost::string_view> sink;
+    FindingsSink<boost::iterator_range<const char*>> sink;
     ASSERT_EQ(strat::divide_and_conquer(kLoremIpsum, tokenizer_, std::ref(sink), std::thread::hardware_concurrency()), EXIT_SUCCESS);
     validate(sink);
 }

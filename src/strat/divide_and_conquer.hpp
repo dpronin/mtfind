@@ -8,18 +8,17 @@
 #include <functional>
 #include <iterator>
 #include <type_traits>
+#include <memory>
 
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/range/numeric.hpp>
 #include <boost/range/adaptor/transformed.hpp>
-#include <boost/utility/string_view.hpp>
 #include <boost/range/iterator_range.hpp>
-// #include <boost/container/small_vector.hpp>
 
 #include "processors/multithreaded_task_processor.hpp"
 
 #include "splitters/range_splitter.hpp"
-#include "aux/chunk_handler_ctx.hpp"
+#include "aux/chunk_handler.hpp"
 #include "aux/iterator_concept.hpp"
 
 namespace mtfind::strat
@@ -45,11 +44,11 @@ auto generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_nu
     {
         task_generator = [] (auto first, auto last, auto handler) {
             return [=] () mutable {
-                RangeSplitter<Iterator> chunk_reader(first, last, '\n');
+                RangeSplitter<Iterator> reader(first, last, '\n');
                 size_t chunk_idx = 0;
-                // process the input file chunk by chunk
-                for (auto chunk = chunk_reader(); chunk_reader; ++chunk_idx, chunk = chunk_reader())
-                    handler(chunk_idx, chunk);
+                // process the input produced by the reader chunk by chunk
+                for (auto chunk = reader(); reader; ++chunk_idx, chunk = reader())
+                    handler(chunk_idx, std::move(chunk));
             };
         };
     }
@@ -57,13 +56,13 @@ auto generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_nu
     {
         task_generator = [] (auto first, auto last, auto handler) {
             return [=] () mutable {
-                RangeSplitter<Iterator> chunk_reader(first, last, '\n');
+                RangeSplitter<Iterator> reader(first, last, '\n');
                 size_t chunk_idx = 0;
-                // process the input file chunk by chunk
-                for (auto chunk = chunk_reader(); chunk_reader; ++chunk_idx, chunk = chunk_reader())
+                // process the input produced by the reader chunk by chunk
+                for (auto chunk = reader(); reader; ++chunk_idx, chunk = reader())
                 {
                     if (!chunk.empty())
-                        handler(chunk_idx, chunk);
+                        handler(chunk_idx, std::move(chunk));
                 };
             };
         };
@@ -113,59 +112,31 @@ auto generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_nu
 /// @param[in]  workers_count        A number of threads to use
 ///
 /// @tparam     Iterator             A RAI iterator
-/// @tparam     RangeTokenizer       A functor like tokenizer for a chunk
+/// @tparam     ChunkTokenizer       A functor like tokenizer for a chunk
 /// @tparam     ChunkFindingsSink    A functor-like sink type
 ///
 /// @return     0 in case of success, any other values otherwise
 ///
-template<typename Iterator, typename RangeTokenizer, typename ChunkFindingsSink>
+template<typename Iterator, typename ChunkTokenizer, typename ChunkFindingsSink>
 typename std::enable_if<mtfind::detail::is_random_access_char_iterator<Iterator>, int>::type
-divide_and_conquer(Iterator first, Iterator last, RangeTokenizer tokenizer, ChunkFindingsSink &&findings_sink, size_t workers_count = std::thread::hardware_concurrency())
+divide_and_conquer(Iterator first, Iterator last, ChunkTokenizer tokenizer, ChunkFindingsSink &&findings_sink, size_t workers_count = std::thread::hardware_concurrency())
 {
     if (0 == workers_count)
         workers_count = 1;
 
-    class HandlerCtx : public mtfind::detail::ChunkHandlerCtx<boost::string_view>
-    {
-    public:
-        void set_last_chunk_idx(size_t chunk_idx) noexcept { last_chunk_idx_ = chunk_idx + 1; }
-        size_t last_chunk_idx() const noexcept { return last_chunk_idx_; }
+    using ChunkHandler   = mtfind::detail::ChunkHandler<ChunkTokenizer, boost::iterator_range<Iterator>>;
+    using data_aligned_t = typename std::aligned_storage<sizeof(ChunkHandler), alignof(ChunkHandler)>::type;
 
-    private:
-        size_t last_chunk_idx_ = 0;
-    };
+    std::vector<ChunkHandler> handlers;
+    handlers.reserve(workers_count);
+    std::generate_n(std::back_inserter(handlers), workers_count, [tokenizer] () mutable { return ChunkHandler(tokenizer); });
 
-    using ContextType = HandlerCtx;
-    std::vector<ContextType> handlers_ctxs(workers_count);
-
-    // generators of handlers of the file's chunks being read
-    auto chunk_handler_generator = [tokenizer, ctx_it = handlers_ctxs.begin()] () mutable {
-        // constexpr size_t kSmallVectorCapacity = 100;
-        using RangeIterator = typename ContextType::value_type::const_iterator;
-        // @info no big difference between small_vector and a regular vector in this case of usage
-        // using Container = boost::container::small_vector<boost::iterator_range<Iterator>>, kSmallVectorCapacity>;
-        using Container = std::vector<boost::iterator_range<RangeIterator>>;
-        // the handler will be called on each chunk by a worker
-        // every worker starts handling chunks from the chunk index 1 (see above)
-        // to learn what the index has been last we preserve the 'last_chunk_idx'
-        // in order to restore real chunk indices in the file afterward
-        return [tokenizer, &ctx = *ctx_it++, tokens = Container()](auto chunk_idx, auto const &chunk_value) mutable {
-            if (!chunk_value.empty())
-            {
-                tokenizer(chunk_value, std::back_inserter(tokens));
-                if (!tokens.empty())
-                {
-                    ctx.consume(chunk_idx, std::begin(chunk_value), tokens);
-                    tokens.clear();
-                }
-            }
-            ctx.set_last_chunk_idx(chunk_idx);
-        };
-    };
+    // generators of handlers of the chunks being read
+    auto chunk_handler_generator = [cur_handler = handlers.begin()] () mutable { return std::ref(*cur_handler++); };
 
     MultithreadedTaskProcessor task_processor(workers_count);
 
-    // generate tasks responsible for processing different equal-length regions of the underlying range
+    // generate tasks responsible for processing different equal-lengthed regions of the underlying range
     auto tasks = detail::generate_chunk_handlers_tasks(first, last, task_processor.workers_count(), chunk_handler_generator, true);
 
     // run the task processor up
@@ -177,26 +148,26 @@ divide_and_conquer(Iterator first, Iterator last, RangeTokenizer tokenizer, Chun
     task_processor.wait();
 
     // print out the final results
-    auto all_chunks_findings = handlers_ctxs | boost::adaptors::transformed([](auto const &ctx){ return ctx.chunks_findings(); });
-    std::cout << boost::accumulate(all_chunks_findings, 0, [](auto sum, auto const &item){ return sum + item.size(); }) << '\n';
+    auto all_findings = handlers | boost::adaptors::transformed([](auto const &ctx){ return ctx.findings(); });
+    std::cout << boost::accumulate(all_findings, 0, [](auto sum, auto const &item){ return sum + item.size(); }) << '\n';
 
     // chunk offset is necessary for adjusting chunk indices given by every worker
     // that has started from chunk index 1
-    // to recover true chunk numbers from the file we need to take into account
+    // to recover true chunk numbers with respect to the chunk reader order we need to take into account
     // the last chunk processed by every worker
     size_t chunk_offset = 0;
-    for (auto &ctx : handlers_ctxs)
+    for (auto &handler : handlers)
     {
-        for (auto &chunk_findings : ctx)
+        for (auto &finding : handler.findings())
         {
             // recovering real chunk numbers
-            chunk_findings.first += chunk_offset;
-            findings_sink(std::move(chunk_findings));
+            std::get<0>(finding) += chunk_offset;
+            findings_sink(std::move(finding));
         }
         // adding last chunk index processed by current worker
         // in order to recover real chunk numbers that the next worker
         // has processed
-        chunk_offset += ctx.last_chunk_idx();
+        chunk_offset += handler.last_chunk_idx();
     }
 
     return EXIT_SUCCESS;
@@ -217,13 +188,13 @@ divide_and_conquer(Iterator first, Iterator last, RangeTokenizer tokenizer, Chun
 /// @param[in]  workers_count  A number of threads to use
 ///
 /// @tparam     Range               Range
-/// @tparam     RangeTokenizer      A Functor like tokenizer for a chunk
+/// @tparam     ChunkTokenizer      A Functor like tokenizer for a chunk
 /// @tparam     ChunkFindingsSink   A Functor-like sink type
 ///
 /// @return     0 in case of success, any other values otherwise
 ///
-template<typename Range, typename RangeTokenizer, typename ChunkFindingsSink>
-decltype(auto) divide_and_conquer(Range const &source_range, RangeTokenizer tokenizer, ChunkFindingsSink &&findings_sink, size_t workers_count = std::thread::hardware_concurrency())
+template<typename Range, typename ChunkTokenizer, typename ChunkFindingsSink>
+decltype(auto) divide_and_conquer(Range const &source_range, ChunkTokenizer tokenizer, ChunkFindingsSink &&findings_sink, size_t workers_count = std::thread::hardware_concurrency())
 {
     return divide_and_conquer(std::begin(source_range), std::end(source_range), tokenizer, std::forward<ChunkFindingsSink>(findings_sink), workers_count);
 }

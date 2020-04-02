@@ -11,6 +11,7 @@
 #include <iterator>
 #include <type_traits>
 #include <memory>
+#include <iterator>
 
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/range/numeric.hpp>
@@ -18,12 +19,12 @@
 #include <boost/range/algorithm/transform.hpp>
 #include <boost/range/algorithm_ext.hpp>
 #include <boost/range/iterator_range.hpp>
-// #include <boost/container/small_vector.hpp>
+#include <boost/scope_exit.hpp>
 
 #include "processors/threaded_chunk_processor.hpp"
 
 #include "aux/chunk.hpp"
-#include "aux/chunk_handler_ctx.hpp"
+#include "aux/chunk_handler.hpp"
 
 namespace mtfind::strat
 {
@@ -41,7 +42,7 @@ struct RRChunk
 template<typename ChunkReader, typename ChunkHandler>
 int process_rr(ChunkReader &&reader, ChunkHandler handler, bool process_empty_chunks = false)
 {
-    // process the input file chunk by chunk
+    // process the input produced by the reader chunk by chunk
     if (process_empty_chunks)
     {
         size_t chunk_idx = 0;
@@ -57,7 +58,7 @@ int process_rr(ChunkReader &&reader, ChunkHandler handler, bool process_empty_ch
                 handler(chunk_idx, std::move(chunk));
         }
     }
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 template<typename ChunkReader, typename ChunkHandlerGenerator>
@@ -83,8 +84,33 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
     auto *processors_ptr = reinterpret_cast<ChunkProcessor*>(storage.get());
     auto processors = boost::make_iterator_range(processors_ptr, processors_ptr + processors_count);
 
-    for (auto &processor : processors)
-        new (std::addressof(processor)) ChunkProcessor(generator_wrapper());
+    // safe allocating new chunk processors
+    // if an exception takes place we will gracefully call all the dtors of created items before returning
+    for (auto it = processors.begin(); it != processors.end(); ++it)
+    {
+        try
+        {
+            new (std::addressof(*it)) ChunkProcessor(generator_wrapper());
+        }
+        catch (...)
+        {
+            auto processors_dealloc_range = boost::make_iterator_range(
+                std::make_reverse_iterator(it),
+                std::make_reverse_iterator(processors.begin()));
+            for (auto &processor : processors_dealloc_range)
+                processor.~ChunkProcessor();
+            throw;
+        }
+    }
+
+    // this will safely deallocate resources if any exception occurs
+    // also will work when the function normally returns
+    BOOST_SCOPE_EXIT_ALL(&)
+    {
+        // call dtors manually
+        for (auto &processor : processors)
+            processor.~ChunkProcessor();
+    };
 
     auto rr_handler = [&processors, cur_proc = processors.begin()] (auto chunk_idx, auto const &value) mutable {
         while (!(*cur_proc)({chunk_idx, value}))
@@ -98,34 +124,16 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
     for (auto &processor : processors)
         processor.start();
 
-    // process the input file chunk by chunk handing chunks over workers
+    // this call will run processing the input produced by the reader chunk by chunk handing chunks over workers
     // with each new chunk we switch to the next worker, this way we're balancing
     // the load between workers
-    if (process_empty_chunks)
-    {
-        size_t chunk_idx = 0;
-        for (auto chunk = reader(); reader; ++chunk_idx, chunk = reader())
-            rr_handler(chunk_idx, std::move(chunk));
-    }
-    else
-    {
-        size_t chunk_idx = 0;
-        for (auto chunk = reader(); reader; ++chunk_idx, chunk = reader())
-        {
-            if (!chunk.empty())
-                rr_handler(chunk_idx, std::move(chunk));
-        }
-    }
+    auto const res = process_rr(std::forward<ChunkReader>(reader), rr_handler, process_empty_chunks);
 
     // stop chunk processors, wait for the workers to finish
     for (auto &processor : processors)
         processor.stop();
 
-    // call dtors manually
-    for (auto &processor : processors)
-        processor.~ChunkProcessor();
-
-    return 0;
+    return res;
 }
 
 } // namespace detail
@@ -159,46 +167,34 @@ int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsSink fin
     if (0 == workers_count)
         workers_count = 1;
 
-    using ContextType = mtfind::detail::ChunkHandlerCtx<decltype(reader())>;
-    std::vector<ContextType> handlers_ctxs(workers_count);
+    using ChunkHandler   = mtfind::detail::ChunkHandlerBase<ChunkTokenizer, decltype(reader())>;
+    using data_aligned_t = typename std::aligned_storage<sizeof(ChunkHandler), alignof(ChunkHandler)>::type;
 
-    // generators of handlers of the file's chunks being read
-    auto chunk_handler_gen = [tokenizer, ctx_it = handlers_ctxs.begin()] () mutable {
-        // constexpr size_t kSmallVectorCapacity = 100;
-        using RangeIterator = typename ContextType::value_type::const_iterator;
-        // @info no big difference between small_vector and a regular vector in this case of usage
-        // using Container = boost::container::small_vector<boost::iterator_range<Iterator>>, kSmallVectorCapacity>;
-        using Container = std::vector<boost::iterator_range<RangeIterator>>;
-        // the handler will be called on each chunk by a worker
-        // every worker is given a chunk and its index, which they pass to this handler
-        return [tokenizer, &ctx = *ctx_it++, tokens = Container()](auto chunk_idx, auto const &chunk_value) mutable {
-            tokenizer(chunk_value, std::back_inserter(tokens));
-            if (!tokens.empty())
-            {
-                ctx.consume(chunk_idx, std::begin(chunk_value), tokens);
-                tokens.clear();
-            }
-        };
-    };
+    std::vector<ChunkHandler> handlers;
+    handlers.reserve(workers_count);
+    std::generate_n(std::back_inserter(handlers), workers_count, [tokenizer] () mutable { return ChunkHandler(tokenizer); });
 
-    if (auto const res = detail::process_rr(std::forward<ChunkReader>(reader), chunk_handler_gen, workers_count))
+    // generators of handlers of the chunks being read
+    auto chunk_handler_generator = [cur_handler = handlers.begin()] () mutable { return std::ref(*cur_handler++); };
+
+    if (auto const res = detail::process_rr(std::forward<ChunkReader>(reader), chunk_handler_generator, workers_count))
         return res;
 
-    // erase all contextes with empty findings
-    boost::remove_erase_if(handlers_ctxs, [](auto const &ctx){ return ctx.empty(); });
-
     // print out the final results
-    std::cout << boost::accumulate(handlers_ctxs, 0, [](auto sum, auto const &item){ return sum + item.size(); }) << '\n';
+    std::cout << boost::accumulate(handlers, 0, [](auto sum, auto const &item){ return sum + item.size(); }) << '\n';
 
-    using ChunksFindingsIterator = typename ContextType::const_iterator;
+    using ChunksFindingsIterator = typename ChunkHandler::const_iterator;
     using ChunksFindingsRange    = std::pair<ChunksFindingsIterator, ChunksFindingsIterator>;
     using ChunksFindingsRanges   = std::vector<ChunksFindingsRange>;
     ChunksFindingsRanges result_ranges;
-    result_ranges.reserve(handlers_ctxs.size());
+    result_ranges.reserve(handlers.size());
 
-    boost::transform(handlers_ctxs, std::back_inserter(result_ranges), [](auto const &ctx) {
+    boost::transform(handlers, std::back_inserter(result_ranges), [](auto const &ctx) {
         return std::make_pair(ctx.begin(), ctx.end());
     });
+
+    // erase all empty ranges
+    boost::remove_erase_if(result_ranges, [](auto const &ctx){ return ctx.first == ctx.second; });
 
     // send one by one findings to the sink in ascending order sorted by chunk index
     // contexts's chunks findings ranges given are sorted ascendingly themselves since RR strategy is used
@@ -207,8 +203,8 @@ int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsSink fin
     while (!result_ranges.empty())
     {
         // find a topleast item between the least items of all the contexts's chunks findings
-        auto range_it = boost::min_element(result_ranges, [](auto item, auto min){
-            return (item.first)->first < (min.first)->first;
+        auto range_it = boost::min_element(result_ranges, [](auto const &item, auto const &min) {
+            return std::get<0>(*item.first) < std::get<0>(*min.first);
         });
 
         findings_sink(*(range_it->first));

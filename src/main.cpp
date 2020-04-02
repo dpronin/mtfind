@@ -43,11 +43,13 @@ template<typename PatternSearcher>
 int run(boost::string_view const input_path, PatternSearcher &&searcher)
 {
     // the function printing out the findings for a line
-    auto line_findings_sink = [](auto const &line_findings) {
-        auto item_outputter = [line_no = line_findings.first](auto const &p){
-            std::cout << line_no << " " << p.first << " " << p.second << '\n';
-        };
-        boost::copy(line_findings.second, boost::make_function_output_iterator(item_outputter));
+    auto line_findings_sink = [](auto const &line_finding) {
+        /*           line number                    */
+        std::cout << std::get<0>(line_finding) << ' '
+        /*           position in line               */
+                  << std::get<1>(line_finding) << ' '
+        /*           the finding itself             */
+                  << std::get<2>(line_finding) << '\n';
     };
 
     // define and construct a tokenizer based on the searcher finding subranges

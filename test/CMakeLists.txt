@@ -6,7 +6,7 @@ set(SOURCES
 
 set(HEADERS
     ${MTFIND_SRC_DIR}/aux/chunk.hpp
-    ${MTFIND_SRC_DIR}/aux/chunk_handler_ctx.hpp
+    ${MTFIND_SRC_DIR}/aux/chunk_handler.hpp
     ${MTFIND_SRC_DIR}/aux/iterator_concept.hpp
     ${MTFIND_SRC_DIR}/splitters/stream_splitter.hpp
     ${MTFIND_SRC_DIR}/processors/multithreaded_task_processor.hpp

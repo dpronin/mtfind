@@ -7,7 +7,7 @@ set(SOURCES
 set(HEADERS
     application.hpp
     aux/chunk.hpp
-    aux/chunk_handler_ctx.hpp
+    aux/chunk_handler.hpp
     aux/iterator_concept.hpp
     splitters/stream_splitter.hpp
     processors/multithreaded_task_processor.hpp
