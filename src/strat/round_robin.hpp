@@ -10,6 +10,7 @@
 #include <vector>
 #include <iterator>
 #include <type_traits>
+#include <memory>
 
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/range/numeric.hpp>
@@ -77,22 +78,25 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
     using Chunk          = RRChunk<size_t, decltype(reader())>;
     using ChunkProcessor = ThreadedChunkProcessor<decltype(generator_wrapper()), Chunk>;
 
-    std::vector<std::unique_ptr<ChunkProcessor>> workers;
-    workers.reserve(processors_count);
-    std::generate_n(std::back_inserter(workers), processors_count, [=] () mutable { return std::make_unique<ChunkProcessor>(generator_wrapper()); });
+    using data_aligned_t = typename std::aligned_storage<sizeof(ChunkProcessor), alignof(ChunkProcessor)>::type;
+    std::unique_ptr<data_aligned_t[]> storage(new data_aligned_t[processors_count]);
+    auto *processors_ptr = reinterpret_cast<ChunkProcessor*>(storage.get());
+    auto processors = boost::make_iterator_range(processors_ptr, processors_ptr + processors_count);
+
+    for (auto &processor : processors)
+        new (&processor) ChunkProcessor(generator_wrapper());
 
     // start chunk processors up
-    for (auto &worker : workers)
-        worker->start();
+    for (auto &processor : processors)
+        processor.start();
 
-    auto rr_handler = [first = workers.begin(),
-        last = workers.end(),
-        worker_it = workers.begin()](auto chunk_idx, auto const &value) mutable {
-            while (!(*(*worker_it))({chunk_idx, value}))
-                ;
-            ++worker_it;
-            if (last == worker_it)
-                worker_it = first;
+    auto rr_handler = [&processors, cur_proc = processors.begin()] (auto chunk_idx, auto const &value) mutable {
+        while (!(*cur_proc)({chunk_idx, value}))
+        {
+            ++cur_proc;
+            if (processors.end() == cur_proc)
+                cur_proc = processors.begin();
+        }
     };
 
     // process the input file chunk by chunk handing chunks over workers
@@ -115,8 +119,12 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
     }
 
     // stop chunk processors, wait for the workers to finish
-    for (auto &worker : workers)
-        worker->stop();
+    for (auto &processor : processors)
+        processor.stop();
+
+    // call dtors manually
+    for (auto &processor : processors)
+        processor.~ChunkProcessor();
 
     return 0;
 }
