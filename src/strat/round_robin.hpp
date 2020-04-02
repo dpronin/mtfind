@@ -84,20 +84,21 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
     auto processors = boost::make_iterator_range(processors_ptr, processors_ptr + processors_count);
 
     for (auto &processor : processors)
-        new (&processor) ChunkProcessor(generator_wrapper());
-
-    // start chunk processors up
-    for (auto &processor : processors)
-        processor.start();
+        new (std::addressof(processor)) ChunkProcessor(generator_wrapper());
 
     auto rr_handler = [&processors, cur_proc = processors.begin()] (auto chunk_idx, auto const &value) mutable {
         while (!(*cur_proc)({chunk_idx, value}))
+            ;
         {
             ++cur_proc;
             if (processors.end() == cur_proc)
                 cur_proc = processors.begin();
         }
     };
+
+    // start chunk processors up
+    for (auto &processor : processors)
+        processor.start();
 
     // process the input file chunk by chunk handing chunks over workers
     // with each new chunk we switch to the next worker, this way we're balancing
