@@ -1,26 +1,26 @@
 #include <cstddef>
 #include <cstdlib>
 
+#include <functional>
+#include <sstream>
 #include <string>
+#include <thread>
 #include <tuple>
 #include <vector>
-#include <functional>
-#include <thread>
-#include <sstream>
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include <boost/range/iterator_range.hpp>
 #include <boost/range/numeric.hpp>
 
-#include "splitters/range_splitter.hpp"
-#include "splitters/stream_splitter.hpp"
-#include "searchers/naive_searcher.hpp"
-#include "searchers/boyer_moore_searcher.hpp"
-#include "tokenizers/range_tokenizer.hpp"
 #include "processors/multithreaded_task_processor.hpp"
 #include "processors/threaded_chunk_processor.hpp"
+#include "searchers/boyer_moore_searcher.hpp"
+#include "searchers/naive_searcher.hpp"
+#include "splitters/range_splitter.hpp"
+#include "splitters/stream_splitter.hpp"
+#include "tokenizers/range_tokenizer.hpp"
 
 #include "strat/divide_and_conquer.hpp"
 #include "strat/round_robin.hpp"
@@ -35,7 +35,9 @@ namespace mtfind::test
 {
 
 template <typename T>
-struct RangeSplitterTest : public Test {};
+struct RangeSplitterTest : public Test
+{
+};
 
 using RangeSplitters = Types<RangeSplitter<std::string::const_iterator>>;
 TYPED_TEST_CASE(RangeSplitterTest, RangeSplitters);
@@ -44,8 +46,8 @@ TYPED_TEST(RangeSplitterTest, SplitsStringInLines)
 {
     using SplitterT = TypeParam;
 
-    std::string const text = "line1\nline2\n\nline4\r\nline5\n";
-    std::vector<std::string> const expected_lines = { "line1", "line2", "", "line4\r", "line5" };
+    std::string const text                        = "line1\nline2\n\nline4\r\nline5\n";
+    std::vector<std::string> const expected_lines = {"line1", "line2", "", "line4\r", "line5"};
 
     SplitterT line_splitter(text, '\n');
 
@@ -61,8 +63,8 @@ TYPED_TEST(RangeSplitterTest, SplitsStringAtWhitespaces)
 {
     using SplitterT = TypeParam;
 
-    std::string const text = "Hello, my lo\tvely wor\nld!";
-    std::vector<std::string> const expected_words = { "Hello,", "my", "lo\tvely", "wor\nld!" };
+    std::string const text                        = "Hello, my lo\tvely wor\nld!";
+    std::vector<std::string> const expected_words = {"Hello,", "my", "lo\tvely", "wor\nld!"};
 
     SplitterT wsp_word_splitter(text, ' ');
 
@@ -75,7 +77,9 @@ TYPED_TEST(RangeSplitterTest, SplitsStringAtWhitespaces)
 }
 
 template <typename T>
-struct StreamSplitterTest : public Test {};
+struct StreamSplitterTest : public Test
+{
+};
 
 using StreamSplitters = Types<StreamSplitter>;
 TYPED_TEST_CASE(StreamSplitterTest, StreamSplitters);
@@ -86,7 +90,7 @@ TYPED_TEST(StreamSplitterTest, SplitsStringStreamInLines)
 
     std::istringstream iss("line1\nline2\n\nline4\r\nline5\n");
     iss >> std::noskipws;
-    std::vector<std::string> const expected_lines = { "line1", "line2", "", "line4\r", "line5" };
+    std::vector<std::string> const expected_lines = {"line1", "line2", "", "line4\r", "line5"};
 
     SplitterT line_splitter(iss, '\n');
 
@@ -103,7 +107,7 @@ TYPED_TEST(StreamSplitterTest, SplitsStringStreamAtWhitespaces)
 
     std::istringstream iss("Hello, my lo\tvely wor\nld!");
     iss >> std::noskipws;
-    std::vector<std::string> const expected_words = { "Hello,", "my", "lo\tvely", "wor\nld!" };
+    std::vector<std::string> const expected_words = {"Hello,", "my", "lo\tvely", "wor\nld!"};
 
     SplitterT wsp_word_splitter(iss, ' ');
 
@@ -115,19 +119,21 @@ TYPED_TEST(StreamSplitterTest, SplitsStringStreamAtWhitespaces)
 }
 
 template <typename T>
-struct Searcher : public Test {};
+struct Searcher : public Test
+{
+};
 
 using Searchers = Types<
     NaiveSearcher<std::string>,
     BoyerMooreSearcher<std::string>,
-    BoyerMooreSearcher<std::string, searchers::Boosted>
->;
+    BoyerMooreSearcher<std::string, searchers::Boosted>>;
 TYPED_TEST_CASE(Searcher, Searchers);
 
 TYPED_TEST(Searcher, SuccessfulPatternLookupNoComparator)
 {
     using SearcherT = TypeParam;
 
+    // clang-format off
     std::vector<std::tuple<std::string, std::string, size_t>> const records =
     {
         /*          input text          */ /* pattern to look up */ /* finding's start position */
@@ -136,10 +142,11 @@ TYPED_TEST(Searcher, SuccessfulPatternLookupNoComparator)
         { "uuuuuu uuuuuuuuuuut",            "t",                      18                         },
         { "abcbeafcb",                      "afcb",                   5                          },
     };
+    // clang-format on
 
     for (auto const &record : records)
     {
-        auto const &text = std::get<0>(record);
+        auto const &text    = std::get<0>(record);
         auto const &pattern = std::get<1>(record);
         SearcherT searcher(pattern);
         auto const token = searcher(text.cbegin(), text.cend());
@@ -152,6 +159,7 @@ TYPED_TEST(Searcher, FailedPatternLookupNoComparator)
 {
     using SearcherT = TypeParam;
 
+    // clang-format off
     std::vector<std::pair<std::string, std::string>> const records =
     {
         /*          input text          */ /* pattern to look up */
@@ -160,10 +168,11 @@ TYPED_TEST(Searcher, FailedPatternLookupNoComparator)
         { "uuuuuu uuuuuuuuuuuj",           "m",                   },
         { "abcbeafeb",                     "afcb",                },
     };
+    // clang-format on
 
     for (auto const &record : records)
     {
-        auto const &text = std::get<0>(record);
+        auto const &text    = std::get<0>(record);
         auto const &pattern = std::get<1>(record);
         SearcherT searcher(pattern);
         auto const token = searcher(text.cbegin(), text.cend());
@@ -173,12 +182,13 @@ TYPED_TEST(Searcher, FailedPatternLookupNoComparator)
 }
 
 template <typename T>
-struct ComparatoredSearcher : public Test {};
+struct ComparatoredSearcher : public Test
+{
+};
 
 using ComparatoredSearchers = Types<
     NaiveSearcher<std::string, std::function<bool(char, char)>>,
-    BoyerMooreSearcher<std::string, std::function<bool(char, char)>>
->;
+    BoyerMooreSearcher<std::string, std::function<bool(char, char)>>>;
 TYPED_TEST_CASE(ComparatoredSearcher, ComparatoredSearchers);
 
 TYPED_TEST(ComparatoredSearcher, SuccessfulPatternLookupWithComparator)
@@ -186,14 +196,17 @@ TYPED_TEST(ComparatoredSearcher, SuccessfulPatternLookupWithComparator)
     using SearcherT = TypeParam;
 
     using comparator_t = std::function<bool(char, char)>;
+    // clang-format off
     std::vector<comparator_t> const comparators = {
         [](auto c, auto p){ return '?' == p || p == c; },                         // the pattern comparator used in the application
         [](auto c, auto p){ return '!' == p && 'e' == c || '?' == p || p == c; }, // an arbitrary pattern comparator
         [](auto c, auto p){ return ('&' == p && ('u' - c) == 1) || p == c; },     // an arbitrary pattern comparator
     };
+    // clang-format on
 
     using token_pos_t = std::pair<std::string, size_t>;
 
+    // clang-format off
     std::vector<std::tuple<std::string, std::string, comparator_t, std::vector<token_pos_t>>> const records =
     {
         /*          input text          */ /* pattern to look up */ /* comparator */  /*        findings and their start positions      */
@@ -201,15 +214,16 @@ TYPED_TEST(ComparatoredSearcher, SuccessfulPatternLookupWithComparator)
         { "Find\n\t\tme\nhere!",            "!?",                    comparators[1],   { { "e\n",   8 }, { "er",  11 }, { "e!", 13  } } },
         { "uuuuuu uuuuuuuuuuut",            "uuu&",                  comparators[2],   { { "uuut", 15 }                               } },
     };
+    // clang-format on
 
     for (auto const &record : records)
     {
-        auto const &text = std::get<0>(record);
+        auto const &text    = std::get<0>(record);
         auto const &pattern = std::get<1>(record);
         SearcherT searcher(pattern, std::get<2>(record));
         auto const &exp_token_pos_array = std::get<3>(record);
-        auto exp_token_pos = exp_token_pos_array.cbegin();
-        auto token = searcher(text);
+        auto exp_token_pos              = exp_token_pos_array.cbegin();
+        auto token                      = searcher(text);
         for (; text.cend() != token.begin() && exp_token_pos_array.cend() != exp_token_pos;
              ++exp_token_pos, token = searcher(token.end(), text.cend()))
         {
@@ -227,12 +241,16 @@ TYPED_TEST(ComparatoredSearcher, FailedPatternLookupWithComparator)
     using SearcherT = TypeParam;
 
     using comparator_t = std::function<bool(char, char)>;
+
+    // clang-format off
     std::vector<comparator_t> const comparators = {
         [](auto c, auto p){ return false; },                                        // always false binary function
         [](auto c, auto p){ return 'A' <= c && c <= 'Z' && 'a' <= p && p <= 'z'; }, // an arbitrary pattern comparator
         [](auto c, auto p){ return 'u' == p && 'u' != c; },                         // an arbitrary pattern comparator
     };
+    // clang-format on
 
+    // clang-format off
     std::vector<std::tuple<std::string, std::string, comparator_t>> const records =
     {
         /*          input text          */ /* pattern to look up */ /* comparator */
@@ -240,10 +258,11 @@ TYPED_TEST(ComparatoredSearcher, FailedPatternLookupWithComparator)
         { "Find\n\t\tme\nhere!",            "Find",                  comparators[1] },
         { "uuuuuu uuuuuuuuuuut",            "uuu&",                  comparators[2] },
     };
+    // clang-format on
 
     for (auto const &record : records)
     {
-        auto const &text = std::get<0>(record);
+        auto const &text    = std::get<0>(record);
         auto const &pattern = std::get<1>(record);
         NaiveSearcher<decltype(pattern), comparator_t> searcher(pattern, std::get<2>(record));
         auto const token = searcher(text);
@@ -259,16 +278,20 @@ struct SearcherMock
 
     MOCK_METHOD2(search, token_t(iterator, iterator));
 
-    auto operator()(iterator first, iterator last) { return search(first, last); }
+    auto operator()(iterator first, iterator last)
+    {
+        return search(first, last);
+    }
 };
 
 template <typename T>
-struct Tokenizer : public Test {};
+struct Tokenizer : public Test
+{
+};
 
 using Tokenizers = Types<
     RangeTokenizer<std::function<boost::iterator_range<std::string::const_iterator>(
-        std::string::const_iterator, std::string::const_iterator)>>
->;
+        std::string::const_iterator, std::string::const_iterator)>>>;
 TYPED_TEST_CASE(Tokenizer, Tokenizers);
 
 TYPED_TEST(Tokenizer, Tokenizes)
@@ -276,26 +299,30 @@ TYPED_TEST(Tokenizer, Tokenizes)
     using TokenizerT = TypeParam;
 
     std::string const text = "London is the capital of Great Britain indeed";
+
+    // clang-format off
     // token and its position in the input text
-    std::vector<std::pair<std::string, size_t>> const exp_tokens = {
+    std::vector<std::pair<std::string, size_t>> const exp_tokens =
+    {
         {"London",   0},
         {"Great",   25},
         {"Britain", 31}
     };
+    // clang-format on
 
     // searcher performs lookups of the words separated by whitespaces ' ' and starting from an upper letter
     // must be called exactly expected tokens size + 1 because the last word in the text
     // does not start from an upper letter, hence the searcher will be called one more time
     // than number of words found
     SearcherMock searcher;
-    EXPECT_CALL(searcher, search(_, _)).Times(Exactly(exp_tokens.size() + 1)).WillRepeatedly(Invoke([](auto first, auto last){
+    EXPECT_CALL(searcher, search(_, _)).Times(Exactly(exp_tokens.size() + 1)).WillRepeatedly(Invoke([](auto first, auto last) {
         // searching for words starting from an upper letter
-        first = std::find_if(first, last, [](auto c){ return 'A' <= c && c <= 'Z'; });
+        first = std::find_if(first, last, [](auto c) { return 'A' <= c && c <= 'Z'; });
         return std::make_pair(first, std::find(first, last, ' '));
     }));
 
     // searcher wrapper is essential because the searcher itself is uncopiable
-    auto searcher_wrapper = [&searcher](auto&&...args){ return searcher(std::forward<decltype(args)>(args)...); };
+    auto searcher_wrapper = [&searcher](auto &&... args) { return searcher(std::forward<decltype(args)>(args)...); };
 
     TokenizerT tokenizer(searcher_wrapper);
 
@@ -318,13 +345,13 @@ TYPED_TEST(Tokenizer, ReturnsEmptyCollection)
     SearcherMock searcher;
 
     // searcher returns that nothing has been found, must be called exactly once
-    EXPECT_CALL(searcher, search(_, _)).WillOnce(Invoke([](auto first, auto last){
+    EXPECT_CALL(searcher, search(_, _)).WillOnce(Invoke([](auto first, auto last) {
         // searching for words starting from an upper letter
         return std::make_pair(last, last);
     }));
 
     // searcher wrapper is essential because the searcher itself is uncopiable
-    auto searcher_wrapper = [&searcher](auto&&...args){ return searcher(std::forward<decltype(args)>(args)...); };
+    auto searcher_wrapper = [&searcher](auto &&... args) { return searcher(std::forward<decltype(args)>(args)...); };
 
     RangeTokenizer<decltype(searcher_wrapper)> tokenizer(searcher_wrapper);
 
@@ -336,7 +363,10 @@ TYPED_TEST(Tokenizer, ReturnsEmptyCollection)
 struct TaskMock
 {
     MOCK_METHOD0(exec, void());
-    void operator()() { exec(); }
+    void operator()()
+    {
+        exec();
+    }
 };
 
 TEST(MultithreadedTaskProcessors, HandlesTasksExpectedTimes)
@@ -371,8 +401,8 @@ TEST(ThreadedChunkProcessor, HandlesTasksAsChunksExpectedTimes)
     TaskMock task;
     EXPECT_CALL(task, exec()).Times(Exactly(kCallsCount));
 
-    std::function<void()> caller = [&task]{ task(); };
-    auto handler = [](std::function<void()> &&caller){ caller(); };
+    std::function<void()> caller = [&task] { task(); };
+    auto handler                 = [](std::function<void()> &&caller) { caller(); };
 
     ThreadedChunkProcessor<decltype(handler), std::function<void()>> processor(handler);
 
@@ -387,15 +417,15 @@ TEST(ThreadedChunkProcessor, DoesNotHandleTaskAsChunkIfNotRunning)
     TaskMock task;
     EXPECT_CALL(task, exec()).Times(0);
 
-    std::function<void()> caller = [&task]{ task(); };
-    auto handler = [](auto &&caller){ caller(); };
+    std::function<void()> caller = [&task] { task(); };
+    auto handler                 = [](auto &&caller) { caller(); };
 
     ThreadedChunkProcessor<decltype(handler), std::function<void()>> processor(handler);
 
     processor(caller);
 }
 
-template<typename ValueType>
+template <typename ValueType>
 class FindingsSink
 {
 public:
@@ -406,7 +436,10 @@ public:
         findings_.push_back(std::move(finding));
     }
 
-    auto const& findings() const noexcept { return findings_; }
+    auto const &findings() const noexcept
+    {
+        return findings_;
+    }
 
 private:
     Container findings_;
@@ -415,16 +448,18 @@ private:
 class ParseLoremIpsum : public Test
 {
 public:
-    ParseLoremIpsum() : searcher_(kPattern_), tokenizer_(searcher_)
-    {}
+    ParseLoremIpsum()
+        : searcher_(kPattern_), tokenizer_(searcher_)
+    {
+    }
     ~ParseLoremIpsum() override = default;
 
 protected:
-    template<typename T>
+    template <typename T>
     void validate(FindingsSink<T> const &sink)
     {
         auto const &findings = sink.findings();
-        auto exp_line_it = kExpLinesFindings_.cbegin();
+        auto exp_line_it     = kExpLinesFindings_.cbegin();
         for (auto const &finding : findings)
         {
             EXPECT_EQ(std::get<0>(finding), exp_line_it->first);
@@ -437,6 +472,7 @@ protected:
 
 protected:
     std::string const kPattern_ = "vitae";
+    // clang-format off
     std::vector<std::pair<size_t, size_t>> const kExpLinesFindings_ = {
         { 5 ,  21  },
         { 6 ,  84  },
@@ -449,15 +485,16 @@ protected:
         { 32,  48  },
         { 33,  63  }
     };
+    // clang-format on
 
     BoyerMooreSearcher<decltype(kPattern_)> searcher_;
-    RangeTokenizer<decltype(searcher_)>     tokenizer_;
+    RangeTokenizer<decltype(searcher_)> tokenizer_;
 };
 
 TEST_F(ParseLoremIpsum, RoundRobinWithRandomAccessRangeLoremIpsum)
 {
     RangeSplitter<decltype(std::begin(kLoremIpsum))> line_splitter(kLoremIpsum, '\n');
-    FindingsSink<boost::iterator_range<const char*>> sink;
+    FindingsSink<boost::iterator_range<const char *>> sink;
     ASSERT_EQ(strat::round_robin(line_splitter, tokenizer_, std::ref(sink), std::thread::hardware_concurrency()), EXIT_SUCCESS);
     validate(sink);
 }
@@ -474,14 +511,15 @@ TEST_F(ParseLoremIpsum, RoundRobinWithStreamedAccessLoremIpsum)
 
 TEST_F(ParseLoremIpsum, DivideAndConquer)
 {
-    FindingsSink<boost::iterator_range<const char*>> sink;
+    FindingsSink<boost::iterator_range<const char *>> sink;
     ASSERT_EQ(strat::divide_and_conquer(kLoremIpsum, tokenizer_, std::ref(sink), std::thread::hardware_concurrency()), EXIT_SUCCESS);
     validate(sink);
 }
 
 } // namespace mtfind::test
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

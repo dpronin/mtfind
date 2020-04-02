@@ -11,7 +11,7 @@ namespace mtfind
 class Application final
 {
 public:
-    static Application& instance() noexcept
+    static Application &instance() noexcept
     {
         static Application app;
         return app;
@@ -21,15 +21,22 @@ public:
     class PatternValidator
     {
     public:
-        template<typename T>
+        template <typename T>
         bool operator()(T c) const noexcept
         {
             has_masked_symbols_ = has_masked_symbols_ || '?' == c;
             return 0 <= c && c <= 0x7E && '\n' != c && '\r' != c || '?' == c;
         }
 
-        bool has_masked_symbols() const noexcept { return has_masked_symbols_; }
-        void reset() noexcept { has_masked_symbols_ = false; }
+        bool has_masked_symbols() const noexcept
+        {
+            return has_masked_symbols_;
+        }
+
+        void reset() noexcept
+        {
+            has_masked_symbols_ = false;
+        }
 
     private:
         mutable bool has_masked_symbols_ = false;
@@ -40,14 +47,20 @@ public:
     ///
     /// @return     The comparator
     ///
-    auto masked_pattern_comparator() const noexcept { return [](auto c, auto p){ return '?' == p || c == p; }; }
+    auto masked_pattern_comparator() const noexcept
+    {
+        return [](auto c, auto p) { return '?' == p || c == p; };
+    }
 
     ///
     /// @brief      Gets the validator for application's pattern provided through the arguments
     ///
     /// @return     Validator of a pattern
     ///
-    PatternValidator pattern_validator() const noexcept { return {}; }
+    PatternValidator pattern_validator() const noexcept
+    {
+        return {};
+    }
 
     ///
     /// @brief      Prints a help page.
@@ -81,7 +94,8 @@ examples:
 
     > cat input.txt | mtfind - "wor:d"
         Will do the same as the previous example except that stdin is used, that is tied to stdout of 'cat' by pipelining
-    )help""\n";
+    )help"
+                     "\n";
     }
 
 private:

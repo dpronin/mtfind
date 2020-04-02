@@ -1,29 +1,29 @@
 #include <cstddef>
 #include <cstdlib>
 
-#include <iostream>
-#include <utility>
-#include <stdexcept>
-#include <iterator>
 #include <functional>
+#include <iostream>
+#include <iterator>
+#include <stdexcept>
+#include <utility>
 
 #include <boost/algorithm/cxx11/all_of.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 #include <boost/function_output_iterator.hpp>
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/range/algorithm/copy.hpp>
 #include <boost/utility/string_view.hpp>
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem/fstream.hpp>
 
-#include "splitters/stream_splitter.hpp"
-#include "splitters/range_splitter.hpp"
-#include "searchers/naive_searcher.hpp"
 #include "searchers/boyer_moore_searcher.hpp"
+#include "searchers/naive_searcher.hpp"
+#include "splitters/range_splitter.hpp"
+#include "splitters/stream_splitter.hpp"
 #include "tokenizers/range_tokenizer.hpp"
 
-#include "strat/round_robin.hpp"
 #include "strat/divide_and_conquer.hpp"
+#include "strat/round_robin.hpp"
 
 #include "application.hpp"
 
@@ -32,23 +32,23 @@ using namespace mtfind;
 namespace
 {
 
-template<typename...Args>
-int streamed_run(std::istream &is, Args&&...args)
+template <typename... Args>
+int streamed_run(std::istream &is, Args &&... args)
 {
     is >> std::noskipws;
     return strat::round_robin(StreamSplitter(is, '\n'), std::forward<Args>(args)...);
 }
 
-template<typename PatternSearcher>
+template <typename PatternSearcher>
 int run(boost::string_view const input_path, PatternSearcher &&searcher)
 {
     // the function printing out the findings for a line
     auto line_findings_sink = [](auto const &line_finding) {
-        /*           line number                    */
+        /*                     line number          */
         std::cout << std::get<0>(line_finding) << ' '
-        /*           position in line               */
+                  /*           position in line     */
                   << std::get<1>(line_finding) << ' '
-        /*           the finding itself             */
+                  /*           the finding itself   */
                   << std::get<2>(line_finding) << '\n';
     };
 
@@ -58,7 +58,7 @@ int run(boost::string_view const input_path, PatternSearcher &&searcher)
     Tokenizer tokenizer(std::forward<PatternSearcher>(searcher));
 
     // input may be stdin specified as '-' or a path to a file
-    auto use_stdin = [](auto &&input_path){ return input_path == "-"; };
+    auto use_stdin = [](auto &&input_path) { return input_path == "-"; };
     if (!use_stdin(input_path))
     {
         boost::filesystem::path const input_file_path(input_path.data());
@@ -141,7 +141,8 @@ int run(boost::string_view const input_path, PatternSearcher &&searcher)
 ///
 /// @return     result of the program, 0 when success, another value otherwise
 ///
-int main(int argc, char const *argv[]) try
+int main(int argc, char const *argv[])
+try
 {
     // synchronization with printf-like function is disabled
     // since no printf-like functions are used in the application

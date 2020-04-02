@@ -2,8 +2,8 @@
 
 namespace mtfind::test
 {
-    static constexpr char kLoremIpsum[] =
-R"LOREM_IPSUM(Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+static constexpr char kLoremIpsum[] =
+    R"LOREM_IPSUM(Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 Praesent a ipsum eget magna scelerisque maximus. Nulla facilisi.
 Pellentesque ornare luctus lorem, sit amet mattis arcu convallis et. Praesent auctor erat non odio malesuada,
 sit amet tincidunt tellus suscipit. Sed finibus elit libero, eget pretium justo pulvinar quis.

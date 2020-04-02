@@ -1,7 +1,7 @@
 #pragma once
 
-#include <utility>
 #include <iterator>
+#include <utility>
 
 namespace mtfind
 {
@@ -12,12 +12,14 @@ namespace mtfind
 ///
 /// @tparam     Searcher      A searcher type, a functor-like class with two iterators as parameters
 ///
-template<typename Searcher>
+template <typename Searcher>
 class RangeTokenizer
 {
 public:
-    explicit RangeTokenizer(Searcher searcher) noexcept : searcher_(searcher)
-    {}
+    explicit RangeTokenizer(Searcher searcher) noexcept
+        : searcher_(searcher)
+    {
+    }
 
     ///
     /// @brief      Tokenizing source range represented by iterators,
@@ -30,7 +32,7 @@ public:
     /// @tparam     RangeIt    Range iterator
     /// @tparam     OutputIt   Output iterator
     ///
-    template<typename RangeIt, typename OutputIt>
+    template <typename RangeIt, typename OutputIt>
     void operator()(RangeIt first, RangeIt last, OutputIt out)
     {
         for (; first != last; ++out)
@@ -39,7 +41,7 @@ public:
             if (token.empty())
                 break;
             first = token.end();
-            *out = std::move(token);
+            *out  = std::move(token);
         }
     }
 
@@ -53,7 +55,10 @@ public:
     /// @tparam     OutputIt
     ///
     template <typename Range, typename OutputIt>
-    void operator()(Range const &range, OutputIt out) { return (*this)(std::begin(range), std::end(range), out); }
+    void operator()(Range const &range, OutputIt out)
+    {
+        return (*this)(std::begin(range), std::end(range), out);
+    }
 
 private:
     Searcher searcher_;

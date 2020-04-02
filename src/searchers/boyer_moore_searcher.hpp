@@ -4,17 +4,19 @@
 
 #include <algorithm>
 
-#include <utility>
-#include <iterator>
 #include <array>
+#include <iterator>
+#include <utility>
 
-#include <boost/range/iterator_range.hpp>
 #include <boost/algorithm/searching/boyer_moore.hpp>
+#include <boost/range/iterator_range.hpp>
 
 namespace mtfind
 {
 
+// clang-format off
 namespace searchers { struct Boosted {}; } // namespace searchers
+// clang-format on
 
 ///
 /// @brief      Searcher class that uses a pattern and a comparator given
@@ -26,7 +28,7 @@ namespace searchers { struct Boosted {}; } // namespace searchers
 /// @tparam     Pattern
 /// @tparam     Comparator
 ///
-template<typename Pattern, typename Comparator = void>
+template <typename Pattern, typename Comparator = void>
 class BoyerMooreSearcher
 {
 public:
@@ -36,8 +38,10 @@ public:
     /// @param[in]  pattern  The pattern that input ranges will be compared with using the comparator
     /// @param[in]  comp     The comparator
     ///
-    explicit BoyerMooreSearcher(Pattern pattern, Comparator comp = Comparator()) noexcept : pattern_(pattern), comp_(std::move(comp))
-    {}
+    explicit BoyerMooreSearcher(Pattern pattern, Comparator comp = Comparator()) noexcept
+        : pattern_(pattern), comp_(comp)
+    {
+    }
 
     ///
     /// @brief      Finds the first occurrence of the pattern
@@ -50,7 +54,7 @@ public:
     ///
     /// @return     A subrange of input's iterators that meets the pattern
     ///
-    template<typename BidirIterator>
+    template <typename BidirIterator>
     auto operator()(BidirIterator first, BidirIterator last) const noexcept
     {
         if (std::begin(pattern_) == std::end(pattern_))
@@ -60,7 +64,7 @@ public:
         {
             auto end_range = std::next(first, pattern_.size());
             // need to reverse parameters of the comparator since the latter expects them in reversed order
-            auto mism = std::mismatch(pattern_.rbegin(), pattern_.rend(), std::make_reverse_iterator(end_range), [&](auto p, auto c){ return comp_(c, p); });
+            auto mism = std::mismatch(pattern_.rbegin(), pattern_.rend(), std::make_reverse_iterator(end_range), [&](auto p, auto c) { return comp_(c, p); });
             if (pattern_.rend() != mism.first)
             {
                 auto pat_rit2 = std::next(mism.first);
@@ -87,11 +91,14 @@ public:
     ///
     /// @return     A subrange that meets the pattern
     ///
-    template<typename Range>
-    auto operator()(Range const &input) const noexcept { return (*this)(std::begin(input), std::end(input)); }
+    template <typename Range>
+    auto operator()(Range const &input) const noexcept
+    {
+        return (*this)(std::begin(input), std::end(input));
+    }
 
 private:
-    Pattern    pattern_;
+    Pattern pattern_;
     Comparator comp_;
 };
 
@@ -103,7 +110,7 @@ private:
 ///
 /// @tparam     Pattern
 ///
-template<typename Pattern>
+template <typename Pattern>
 class BoyerMooreSearcher<Pattern, void>
 {
 public:
@@ -112,7 +119,8 @@ public:
     ///
     /// @param[in]  pattern     The pattern that input ranges will be compared with
     ///
-    explicit BoyerMooreSearcher(Pattern pattern) noexcept : pattern_(pattern)
+    explicit BoyerMooreSearcher(Pattern pattern) noexcept
+        : pattern_(pattern)
     {
         pattern_offsets_.fill(-1);
         // Fill distances to the last occurrence of the characters
@@ -130,7 +138,7 @@ public:
     ///
     /// @return     A subrange of input's iterators that meets the pattern
     ///
-    template<typename BidirIterator>
+    template <typename BidirIterator>
     auto operator()(BidirIterator first, BidirIterator last) const noexcept
     {
         if (std::begin(pattern_) == std::end(pattern_))
@@ -139,12 +147,12 @@ public:
         while (pattern_.size() <= std::distance(first, last))
         {
             auto end_range = std::next(first, pattern_.size());
-            auto mism = std::mismatch(pattern_.rbegin(), pattern_.rend(), std::make_reverse_iterator(end_range));
+            auto mism      = std::mismatch(pattern_.rbegin(), pattern_.rend(), std::make_reverse_iterator(end_range));
             if (pattern_.rend() != mism.first)
             {
-                auto const offset = std::distance(mism.first, pattern_.rend()) - 1;
+                auto const offset     = std::distance(mism.first, pattern_.rend()) - 1;
                 auto const pat_offset = pattern_offsets_[*mism.second];
-                first = std::next(first, offset - (offset > pat_offset ? pat_offset : -1));
+                first                 = std::next(first, offset - (offset > pat_offset ? pat_offset : -1));
             }
             else
             {
@@ -164,13 +172,16 @@ public:
     ///
     /// @return     A subrange that meets the pattern
     ///
-    template<typename Range>
-    auto operator()(Range const &input) const noexcept { return (*this)(std::begin(input), std::end(input)); }
+    template <typename Range>
+    auto operator()(Range const &input) const noexcept
+    {
+        return (*this)(std::begin(input), std::end(input));
+    }
 
 private:
-    static constexpr size_t  kMaxChars = 256;
+    static constexpr size_t kMaxChars = 256;
 
-    Pattern                             pattern_;
+    Pattern pattern_;
     std::array<int_fast32_t, kMaxChars> pattern_offsets_;
 };
 
@@ -182,12 +193,14 @@ private:
 ///
 /// @tparam     Pattern
 ///
-template<typename Pattern>
+template <typename Pattern>
 class BoyerMooreSearcher<Pattern, searchers::Boosted>
 {
 public:
-    explicit BoyerMooreSearcher(Pattern pattern) : pattern_(pattern) , searcher_(std::begin(pattern_), std::end(pattern_))
-    {}
+    explicit BoyerMooreSearcher(Pattern pattern)
+        : pattern_(pattern), searcher_(std::begin(pattern_), std::end(pattern_))
+    {
+    }
 
     ///
     /// @brief      Finds the first occurrence of the pattern in the input range
@@ -199,7 +212,7 @@ public:
     ///
     /// @return     A subrange of input's iterators that meets the pattern
     ///
-    template<typename RandomAccessIterator>
+    template <typename RandomAccessIterator>
     auto operator()(RandomAccessIterator first, RandomAccessIterator last) const noexcept
     {
         auto match = searcher_(first, last);
@@ -215,11 +228,14 @@ public:
     ///
     /// @return     A subrange that meets the pattern
     ///
-    template<typename Range>
-    auto operator()(Range const &input) const noexcept { return (*this)(std::begin(input), std::end(input)); }
+    template <typename Range>
+    auto operator()(Range const &input) const noexcept
+    {
+        return (*this)(std::begin(input), std::end(input));
+    }
 
 private:
-    Pattern                                                       pattern_;
+    Pattern pattern_;
     boost::algorithm::boyer_moore<decltype(std::begin(pattern_))> searcher_;
 };
 

@@ -3,22 +3,20 @@
 #include <cstddef>
 #include <cstdlib>
 
-#include <thread>
-#include <utility>
 #include <algorithm>
-#include <memory>
-#include <vector>
 #include <iterator>
+#include <memory>
+#include <thread>
 #include <type_traits>
-#include <memory>
-#include <iterator>
+#include <utility>
+#include <vector>
 
 #include <boost/iostreams/device/mapped_file.hpp>
-#include <boost/range/numeric.hpp>
 #include <boost/range/algorithm/min_element.hpp>
 #include <boost/range/algorithm/transform.hpp>
 #include <boost/range/algorithm_ext.hpp>
 #include <boost/range/iterator_range.hpp>
+#include <boost/range/numeric.hpp>
 #include <boost/scope_exit.hpp>
 
 #include "processors/threaded_chunk_processor.hpp"
@@ -32,14 +30,14 @@ namespace mtfind::strat
 namespace detail
 {
 
-template<typename T1, typename T2>
+template <typename T1, typename T2>
 struct RRChunk
 {
     T1 idx;
     T2 value;
 };
 
-template<typename ChunkReader, typename ChunkHandler>
+template <typename ChunkReader, typename ChunkHandler>
 int process_rr(ChunkReader &&reader, ChunkHandler handler, bool process_empty_chunks = false)
 {
     // process the input produced by the reader chunk by chunk
@@ -61,7 +59,7 @@ int process_rr(ChunkReader &&reader, ChunkHandler handler, bool process_empty_ch
     return EXIT_SUCCESS;
 }
 
-template<typename ChunkReader, typename ChunkHandlerGenerator>
+template <typename ChunkReader, typename ChunkHandlerGenerator>
 int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t workers_count = 1, bool process_empty_chunks = false)
 {
     // one threaded case of solving
@@ -70,7 +68,7 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
 
     auto const processors_count = workers_count - 1;
 
-    auto generator_wrapper = [generator] () mutable {
+    auto generator_wrapper = [generator]() mutable {
         return [handler = generator()](auto &&chunk) mutable {
             handler(chunk.idx, std::forward<decltype(chunk.value)>(chunk.value));
         };
@@ -81,8 +79,8 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
 
     using data_aligned_t = typename std::aligned_storage<sizeof(ChunkProcessor), alignof(ChunkProcessor)>::type;
     std::unique_ptr<data_aligned_t[]> storage(new data_aligned_t[processors_count]);
-    auto *processors_ptr = reinterpret_cast<ChunkProcessor*>(storage.get());
-    auto processors = boost::make_iterator_range(processors_ptr, processors_ptr + processors_count);
+    auto *processors_ptr = reinterpret_cast<ChunkProcessor *>(storage.get());
+    auto processors      = boost::make_iterator_range(processors_ptr, processors_ptr + processors_count);
 
     // safe allocating new chunk processors
     // if an exception takes place we will gracefully call all the dtors of created items before returning
@@ -112,7 +110,7 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
             processor.~ChunkProcessor();
     };
 
-    auto rr_handler = [&processors, cur_proc = processors.begin()] (auto chunk_idx, auto const &value) mutable {
+    auto rr_handler = [&processors, cur_proc = processors.begin()](auto chunk_idx, auto const &value) mutable {
         while (!(*cur_proc)({chunk_idx, value}))
             ;
         ++cur_proc;
@@ -161,7 +159,7 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
 ///
 /// @return     0 in case of success, any other values otherwise
 ///
-template<typename ChunkReader, typename ChunkTokenizer, typename FindingsSink>
+template <typename ChunkReader, typename ChunkTokenizer, typename FindingsSink>
 int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsSink findings_sink, size_t workers_count = std::thread::hardware_concurrency())
 {
     if (0 == workers_count)
@@ -172,16 +170,16 @@ int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsSink fin
 
     std::vector<ChunkHandler> handlers;
     handlers.reserve(workers_count);
-    std::generate_n(std::back_inserter(handlers), workers_count, [tokenizer] () mutable { return ChunkHandler(tokenizer); });
+    std::generate_n(std::back_inserter(handlers), workers_count, [tokenizer]() mutable { return ChunkHandler(tokenizer); });
 
     // generators of handlers of the chunks being read
-    auto chunk_handler_generator = [cur_handler = handlers.begin()] () mutable { return std::ref(*cur_handler++); };
+    auto chunk_handler_generator = [cur_handler = handlers.begin()]() mutable { return std::ref(*cur_handler++); };
 
     if (auto const res = detail::process_rr(std::forward<ChunkReader>(reader), chunk_handler_generator, workers_count))
         return res;
 
     // print out the final results
-    std::cout << boost::accumulate(handlers, 0, [](auto sum, auto const &item){ return sum + item.size(); }) << '\n';
+    std::cout << boost::accumulate(handlers, 0, [](auto sum, auto const &item) { return sum + item.size(); }) << '\n';
 
     using ChunksFindingsIterator = typename ChunkHandler::const_iterator;
     using ChunksFindingsRange    = std::pair<ChunksFindingsIterator, ChunksFindingsIterator>;
@@ -189,12 +187,12 @@ int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsSink fin
     ChunksFindingsRanges result_ranges;
     result_ranges.reserve(handlers.size());
 
-    boost::transform(handlers, std::back_inserter(result_ranges), [](auto const &ctx) {
-        return std::make_pair(ctx.begin(), ctx.end());
+    boost::transform(handlers, std::back_inserter(result_ranges), [](auto const &findings) {
+        return std::make_pair(findings.begin(), findings.end());
     });
 
     // erase all empty ranges
-    boost::remove_erase_if(result_ranges, [](auto const &ctx){ return ctx.first == ctx.second; });
+    boost::remove_erase_if(result_ranges, [](auto const &findings) { return findings.first == findings.second; });
 
     // send one by one findings to the sink in ascending order sorted by chunk index
     // contexts's chunks findings ranges given are sorted ascendingly themselves since RR strategy is used
@@ -223,4 +221,4 @@ int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsSink fin
     return EXIT_SUCCESS;
 }
 
-} // namespace mtfind
+} // namespace mtfind::strat

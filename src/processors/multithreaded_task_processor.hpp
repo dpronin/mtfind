@@ -2,14 +2,14 @@
 
 #include <cstddef>
 
-#include <thread>
-#include <vector>
 #include <future>
-#include <utility>
 #include <memory>
+#include <thread>
+#include <utility>
+#include <vector>
 
-#include <boost/range/adaptor/filtered.hpp>
 #include <boost/asio/io_service.hpp>
+#include <boost/range/adaptor/filtered.hpp>
 
 namespace mtfind
 {
@@ -23,15 +23,16 @@ class MultithreadedTaskProcessor
 public:
     explicit MultithreadedTaskProcessor(size_t workers = std::thread::hardware_concurrency())
         : workers_(workers > 0 ? workers : 1)
-    {}
+    {
+    }
 
     ~MultithreadedTaskProcessor() = default;
 
-    MultithreadedTaskProcessor(MultithreadedTaskProcessor const&)            = delete;
-    MultithreadedTaskProcessor& operator=(MultithreadedTaskProcessor const&) = delete;
+    MultithreadedTaskProcessor(MultithreadedTaskProcessor const &) = delete;
+    MultithreadedTaskProcessor &operator=(MultithreadedTaskProcessor const &) = delete;
 
-    MultithreadedTaskProcessor(MultithreadedTaskProcessor&&)            = delete;
-    MultithreadedTaskProcessor& operator=(MultithreadedTaskProcessor&&) = delete;
+    MultithreadedTaskProcessor(MultithreadedTaskProcessor &&) = delete;
+    MultithreadedTaskProcessor &operator=(MultithreadedTaskProcessor &&) = delete;
 
     ///
     /// @brief      Schedule a task to the processor
@@ -40,8 +41,11 @@ public:
     ///
     /// @tparam     Task
     ///
-    template<typename Task>
-    void operator()(Task &&task) { io_.post(std::forward<Task>(task)); }
+    template <typename Task>
+    void operator()(Task &&task)
+    {
+        io_.post(std::forward<Task>(task));
+    }
 
     ///
     /// @brief      Runs the processor so that it can schedule and run tasks
@@ -54,7 +58,7 @@ public:
             io_.reset();
             work_ = std::make_unique<boost::asio::io_service::work>(io_);
             for (auto &worker : workers_)
-                worker = std::async(std::launch::async, [this]{ io_.run(); });
+                worker = std::async(std::launch::async, [this] { io_.run(); });
         }
     }
 
@@ -64,7 +68,7 @@ public:
     void wait()
     {
         work_.reset();
-        auto valid_workers = workers_ | boost::adaptors::filtered([](auto const &worker){ return worker.valid(); });
+        auto valid_workers = workers_ | boost::adaptors::filtered([](auto const &worker) { return worker.valid(); });
         for (auto &worker : valid_workers)
             worker.get();
     }
@@ -75,18 +79,24 @@ public:
     /// @details    All tasks that have been pushed but not scheduled yet
     ///             are cancelled and not be executed
     ///
-    void stop() { io_.stop(); }
+    void stop()
+    {
+        io_.stop();
+    }
 
     ///
     /// @brief      Gets a number of threads used
     ///
     /// @return     A number of threads
     ///
-    auto workers_count() const noexcept { return workers_.size(); }
+    auto workers_count() const noexcept
+    {
+        return workers_.size();
+    }
 
 private:
-    boost::asio::io_service                        io_;
-    std::vector<std::future<void>>                 workers_;
+    boost::asio::io_service io_;
+    std::vector<std::future<void>> workers_;
     std::unique_ptr<boost::asio::io_service::work> work_;
 };
 

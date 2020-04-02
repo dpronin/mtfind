@@ -2,9 +2,9 @@
 
 #include <cstddef>
 
+#include <atomic>
 #include <future>
 #include <utility>
-#include <atomic>
 
 #include <boost/lockfree/spsc_queue.hpp>
 
@@ -20,7 +20,7 @@ namespace mtfind
 /// @tparam     kQueueCapacity  Capacity of the internal queue that is used to pass chunks from
 ///                             one thread to the other
 ///
-template<typename Handler, typename Chunk, size_t kQueueCapacity = 32768>
+template <typename Handler, typename Chunk, size_t kQueueCapacity = 32768>
 class ThreadedChunkProcessor
 {
 public:
@@ -30,16 +30,18 @@ public:
     /// @param[in]  handler  The handler that will be called in
     ///                      the other concurrent thread-receiver
     ///
-    explicit ThreadedChunkProcessor(Handler handler) : handler_(std::move(handler))
-    {}
+    explicit ThreadedChunkProcessor(Handler handler)
+        : handler_(std::move(handler))
+    {
+    }
 
     ~ThreadedChunkProcessor() = default;
 
-    ThreadedChunkProcessor(ThreadedChunkProcessor const&)            = delete;
-    ThreadedChunkProcessor& operator=(ThreadedChunkProcessor const&) = delete;
+    ThreadedChunkProcessor(ThreadedChunkProcessor const &) = delete;
+    ThreadedChunkProcessor &operator=(ThreadedChunkProcessor const &) = delete;
 
-    ThreadedChunkProcessor(ThreadedChunkProcessor&&)            = delete;
-    ThreadedChunkProcessor& operator=(ThreadedChunkProcessor&&) = delete;
+    ThreadedChunkProcessor(ThreadedChunkProcessor &&) = delete;
+    ThreadedChunkProcessor &operator=(ThreadedChunkProcessor &&) = delete;
 
     ///
     /// @brief      Receives the chunk to process with the handler
@@ -49,7 +51,7 @@ public:
     ///
     /// @tparam     U any type convertable to Chunk or Chunk itself
     ///
-    template<typename U = Chunk>
+    template <typename U = Chunk>
     bool operator()(U &&chunk)
     {
         return queue_.push(std::forward<U>(chunk));
@@ -63,7 +65,7 @@ public:
     {
         if (!stop_token_)
         {
-            worker_ = std::async(std::launch::async, [this]{
+            worker_ = std::async(std::launch::async, [this] {
                 Chunk chunk;
 
                 while (!stop_token_)
@@ -93,11 +95,11 @@ public:
     }
 
 private:
-    Handler                                                                       handler_;
+    Handler handler_;
 
-    std::atomic_bool                                                              stop_token_{false};
+    std::atomic_bool stop_token_{false};
     boost::lockfree::spsc_queue<Chunk, boost::lockfree::capacity<kQueueCapacity>> queue_;
-    std::future<void>                                                             worker_;
+    std::future<void> worker_;
 };
 
 } // namespace mtfind

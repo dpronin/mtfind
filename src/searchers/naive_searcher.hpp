@@ -2,8 +2,8 @@
 
 #include <algorithm>
 
-#include <utility>
 #include <iterator>
+#include <utility>
 
 #include <boost/range/iterator_range.hpp>
 
@@ -18,7 +18,7 @@ namespace mtfind
 /// @tparam     Pattern
 /// @tparam     Comparator
 ///
-template<typename Pattern, typename Comparator = void>
+template <typename Pattern, typename Comparator = void>
 class NaiveSearcher
 {
 public:
@@ -28,8 +28,10 @@ public:
     /// @param[in]  pattern  The pattern that input ranges will be compared with
     /// @param[in]  comp     The comparator
     ///
-    explicit NaiveSearcher(Pattern pattern, Comparator comp = Comparator()) noexcept : pattern_(pattern), comp_(std::move(comp))
-    {}
+    explicit NaiveSearcher(Pattern pattern, Comparator comp = Comparator()) noexcept
+        : pattern_(pattern), comp_(comp)
+    {
+    }
 
     ///
     /// @brief      Finds the first occurrence of the pattern
@@ -42,7 +44,7 @@ public:
     ///
     /// @return     A subrange of input's iterators that meets the pattern
     ///
-    template<typename ForwardIt>
+    template <typename ForwardIt>
     auto operator()(ForwardIt first, ForwardIt last) const noexcept
     {
         first = std::search(first, last, pattern_.begin(), pattern_.end(), comp_);
@@ -59,11 +61,14 @@ public:
     ///
     /// @return     A subrange that meets the pattern
     ///
-    template<typename Range>
-    auto operator()(Range const &input) const noexcept { return (*this)(std::begin(input), std::end(input)); }
+    template <typename Range>
+    auto operator()(Range const &input) const noexcept
+    {
+        return (*this)(std::begin(input), std::end(input));
+    }
 
 private:
-    Pattern    pattern_;
+    Pattern pattern_;
     Comparator comp_;
 };
 
@@ -73,7 +78,7 @@ private:
 ///
 /// @tparam     Pattern
 ///
-template<typename Pattern>
+template <typename Pattern>
 class NaiveSearcher<Pattern, void>
 {
 public:
@@ -82,8 +87,10 @@ public:
     ///
     /// @param[in]  pattern  The pattern
     ///
-    explicit NaiveSearcher(Pattern pattern) noexcept : pattern_(pattern)
-    {}
+    explicit NaiveSearcher(Pattern pattern) noexcept
+        : pattern_(pattern)
+    {
+    }
 
     ///
     /// @brief      Finds the first occurrence of the pattern
@@ -96,7 +103,7 @@ public:
     ///
     /// @return     A subrange of input's iterators that meets the pattern
     ///
-    template<typename ForwardIt>
+    template <typename ForwardIt>
     auto operator()(ForwardIt first, ForwardIt last) const noexcept
     {
         first = std::search(first, last, pattern_.begin(), pattern_.end());
@@ -113,8 +120,11 @@ public:
     ///
     /// @return     A subrange that meets the pattern
     ///
-    template<typename Range>
-    auto operator()(Range const &input) const noexcept { return (*this)(std::begin(input), std::end(input)); }
+    template <typename Range>
+    auto operator()(Range const &input) const noexcept
+    {
+        return (*this)(std::begin(input), std::end(input));
+    }
 
 private:
     Pattern pattern_;

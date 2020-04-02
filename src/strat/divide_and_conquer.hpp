@@ -2,24 +2,24 @@
 
 #include <cstddef>
 
-#include <thread>
-#include <utility>
-#include <vector>
 #include <functional>
 #include <iterator>
-#include <type_traits>
 #include <memory>
+#include <thread>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 #include <boost/iostreams/device/mapped_file.hpp>
-#include <boost/range/numeric.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/iterator_range.hpp>
+#include <boost/range/numeric.hpp>
 
 #include "processors/multithreaded_task_processor.hpp"
 
-#include "splitters/range_splitter.hpp"
 #include "aux/chunk_handler.hpp"
 #include "aux/iterator_concept.hpp"
+#include "splitters/range_splitter.hpp"
 
 namespace mtfind::strat
 {
@@ -27,10 +27,7 @@ namespace mtfind::strat
 namespace detail
 {
 
-template<typename Iterator,
-typename HandlerGenerator,
-typename Task = std::function<void()>,
-typename = typename std::enable_if<mtfind::detail::is_random_access_char_iterator<Iterator>>::type>
+template <typename Iterator, typename HandlerGenerator, typename Task = std::function<void()>, typename = typename std::enable_if<mtfind::detail::is_random_access_char_iterator<Iterator>>::type>
 auto generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_number, HandlerGenerator handler_generator, bool process_empty_chunks = false)
 {
     std::vector<Task> tasks;
@@ -42,8 +39,8 @@ auto generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_nu
 
     if (process_empty_chunks)
     {
-        task_generator = [] (auto first, auto last, auto handler) {
-            return [=] () mutable {
+        task_generator = [](auto first, auto last, auto handler) {
+            return [=]() mutable {
                 RangeSplitter<Iterator> reader(first, last, '\n');
                 size_t chunk_idx = 0;
                 // process the input produced by the reader chunk by chunk
@@ -54,8 +51,8 @@ auto generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_nu
     }
     else
     {
-        task_generator = [] (auto first, auto last, auto handler) {
-            return [=] () mutable {
+        task_generator = [](auto first, auto last, auto handler) {
+            return [=]() mutable {
                 RangeSplitter<Iterator> reader(first, last, '\n');
                 size_t chunk_idx = 0;
                 // process the input produced by the reader chunk by chunk
@@ -74,7 +71,7 @@ auto generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_nu
         data_chunk_size = 1;
 
     // a helper for seeking a nearest new line symbol
-    auto find_next_nl = [=](auto first){
+    auto find_next_nl = [=](auto first) {
         return std::find(std::next(first, std::min(data_chunk_size, static_cast<size_t>(std::distance(first, end)))), end, '\n');
     };
 
@@ -117,9 +114,9 @@ auto generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_nu
 ///
 /// @return     0 in case of success, any other values otherwise
 ///
-template<typename Iterator, typename ChunkTokenizer, typename ChunkFindingsSink>
+template <typename Iterator, typename ChunkTokenizer, typename ChunkFindingsSink>
 typename std::enable_if<mtfind::detail::is_random_access_char_iterator<Iterator>, int>::type
-divide_and_conquer(Iterator first, Iterator last, ChunkTokenizer tokenizer, ChunkFindingsSink &&findings_sink, size_t workers_count = std::thread::hardware_concurrency())
+    divide_and_conquer(Iterator first, Iterator last, ChunkTokenizer tokenizer, ChunkFindingsSink &&findings_sink, size_t workers_count = std::thread::hardware_concurrency())
 {
     if (0 == workers_count)
         workers_count = 1;
@@ -129,10 +126,10 @@ divide_and_conquer(Iterator first, Iterator last, ChunkTokenizer tokenizer, Chun
 
     std::vector<ChunkHandler> handlers;
     handlers.reserve(workers_count);
-    std::generate_n(std::back_inserter(handlers), workers_count, [tokenizer] () mutable { return ChunkHandler(tokenizer); });
+    std::generate_n(std::back_inserter(handlers), workers_count, [tokenizer]() mutable { return ChunkHandler(tokenizer); });
 
     // generators of handlers of the chunks being read
-    auto chunk_handler_generator = [cur_handler = handlers.begin()] () mutable { return std::ref(*cur_handler++); };
+    auto chunk_handler_generator = [cur_handler = handlers.begin()]() mutable { return std::ref(*cur_handler++); };
 
     MultithreadedTaskProcessor task_processor(workers_count);
 
@@ -148,8 +145,8 @@ divide_and_conquer(Iterator first, Iterator last, ChunkTokenizer tokenizer, Chun
     task_processor.wait();
 
     // print out the final results
-    auto all_findings = handlers | boost::adaptors::transformed([](auto const &ctx){ return ctx.findings(); });
-    std::cout << boost::accumulate(all_findings, 0, [](auto sum, auto const &item){ return sum + item.size(); }) << '\n';
+    auto all_findings = handlers | boost::adaptors::transformed([](auto const &handler) { return handler.findings(); });
+    std::cout << boost::accumulate(all_findings, 0, [](auto sum, auto const &findings) { return sum + findings.size(); }) << '\n';
 
     // chunk offset is necessary for adjusting chunk indices given by every worker
     // that has started from chunk index 1
@@ -193,10 +190,10 @@ divide_and_conquer(Iterator first, Iterator last, ChunkTokenizer tokenizer, Chun
 ///
 /// @return     0 in case of success, any other values otherwise
 ///
-template<typename Range, typename ChunkTokenizer, typename ChunkFindingsSink>
+template <typename Range, typename ChunkTokenizer, typename ChunkFindingsSink>
 decltype(auto) divide_and_conquer(Range const &source_range, ChunkTokenizer tokenizer, ChunkFindingsSink &&findings_sink, size_t workers_count = std::thread::hardware_concurrency())
 {
     return divide_and_conquer(std::begin(source_range), std::end(source_range), tokenizer, std::forward<ChunkFindingsSink>(findings_sink), workers_count);
 }
 
-} // namespace mtfind
+} // namespace mtfind::strat
