@@ -49,7 +49,7 @@ public:
             auto const p = pattern[i];
             for (int c = 0; c < kMaxChars; ++c)
                 if (comp(c, p))
-                    pattern_offsets_[c] = i;
+                    pattern_offsets_[static_cast<uint8_t>(c)] = i;
         }
     }
 
@@ -74,11 +74,11 @@ public:
         {
             auto end_range = std::next(first, pattern_.size());
             // need to reverse parameters of the comparator since the latter expects them in reversed order
-            auto mism = std::mismatch(pattern_.rbegin(), pattern_.rend(), std::make_reverse_iterator(end_range), [&](auto p, auto c) { return comp_(c, p); });
+            auto mism = std::mismatch(pattern_.rbegin(), pattern_.rend(), std::make_reverse_iterator(end_range), [this](auto p, auto c) { return comp_(c, p); });
             if (pattern_.rend() != mism.first)
             {
                 auto const offset     = std::distance(mism.first, pattern_.rend()) - 1;
-                auto const pat_offset = pattern_offsets_[*mism.second];
+                auto const pat_offset = pattern_offsets_[static_cast<uint8_t>(*mism.second)];
                 first                 = std::next(first, offset - (offset > pat_offset ? pat_offset : -1));
             }
             else
@@ -137,7 +137,7 @@ public:
         pattern_offsets_.fill(-1);
         // Fill distances to the last occurrence of the characters
         for (int_fast32_t i = 0; i < static_cast<int_fast32_t>(pattern_.size()); i++)
-            pattern_offsets_[pattern_[i]] = i;
+            pattern_offsets_[static_cast<uint8_t>(pattern_[i])] = i;
     }
 
     ///
@@ -163,7 +163,7 @@ public:
             if (pattern_.rend() != mism.first)
             {
                 auto const offset     = std::distance(mism.first, pattern_.rend()) - 1;
-                auto const pat_offset = pattern_offsets_[*mism.second];
+                auto const pat_offset = pattern_offsets_[static_cast<uint8_t>(*mism.second)];
                 first                 = std::next(first, offset - (offset > pat_offset ? pat_offset : -1));
             }
             else
