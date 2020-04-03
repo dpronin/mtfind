@@ -4,6 +4,7 @@
 #include <functional>
 #include <sstream>
 #include <string>
+#include <random>
 
 #include <benchmark/benchmark.h>
 
@@ -75,58 +76,63 @@ void BM_StreamSplitter_Lines(State &state)
     state.SetComplexityN(lines_number);
 }
 
+namespace
+{
+    auto bm_generate_text(size_t symbols_count)
+    {
+        std::string text;
+
+        std::random_device rdev;
+        std::default_random_engine gen{rdev()};
+        std::uniform_int_distribution<char> dist(0, 127);
+
+        text.resize(symbols_count);
+        std::generate(text.begin(), text.end(), [&]{ return dist(gen); });
+
+        return text;
+    }
+
+    auto bm_pattern_comparator() { return [](char c, char p) { return '?' == p || c == p; }; }
+} // anonymous namespace
+
 template <typename SearcherT>
 void BM_Searcher_NoComp_LoremIpsum(State &state)
 {
-    auto const lorem_ipsum_count = state.range(0);
+    size_t symbols_count = state.range(0);
 
-    std::string const pattern = "taciti";
+    std::string pattern(10, '\0');
+    std::string const text = bm_generate_text(symbols_count);
+    std::copy_n(text.rbegin(), std::min(text.size(), pattern.size()), pattern.rbegin());
     SearcherT searcher(pattern);
 
     for (auto _ : state)
     {
-        for (size_t i = 0; i < lorem_ipsum_count; ++i)
-        {
-            auto token = searcher(std::begin(kLoremIpsum), std::end(kLoremIpsum));
-            DoNotOptimize(token);
-        }
+        auto token = searcher(text);
+        DoNotOptimize(token);
     }
 
-    state.SetItemsProcessed(state.iterations() * lorem_ipsum_count);
-    state.SetBytesProcessed(state.items_processed() * sizeof(kLoremIpsum));
-    state.SetComplexityN(lorem_ipsum_count);
+    state.SetBytesProcessed(state.iterations() * symbols_count);
+    state.SetComplexityN(symbols_count);
 }
-
-namespace
-{
-
-auto bm_pattern_comparator()
-{
-    return [](char c, char p) { return '?' == p || c == p; };
-}
-
-} // anonymous namespace
 
 template <typename SearcherT>
 void BM_Searcher_WithComp_LoremIpsum(State &state)
 {
-    auto const lorem_ipsum_count = state.range(0);
+    size_t symbols_count = state.range(0);
 
-    std::string const pattern = "?aciti";
+    std::string pattern(10, '?');
+    std::string const text = bm_generate_text(state.range(0));
+    std::copy_n(text.rbegin(), std::min(text.size(), pattern.size() - 1), pattern.rbegin());
     SearcherT searcher(pattern, bm_pattern_comparator());
 
     for (auto _ : state)
     {
-        for (size_t i = 0; i < lorem_ipsum_count; ++i)
-        {
-            auto token = searcher(kLoremIpsum);
-            DoNotOptimize(token);
-        }
+        auto token = searcher(text);
+        DoNotOptimize(token);
     }
 
-    state.SetItemsProcessed(state.iterations() * lorem_ipsum_count);
-    state.SetBytesProcessed(state.items_processed() * sizeof(kLoremIpsum));
-    state.SetComplexityN(lorem_ipsum_count);
+    state.SetBytesProcessed(state.iterations() * symbols_count);
+    state.SetComplexityN(symbols_count);
 }
 
 BENCHMARK_TEMPLATE(BM_RangeSplitter_Lines, RangeSplitter<std::string::const_iterator>)
@@ -143,31 +149,31 @@ BENCHMARK_TEMPLATE(BM_StreamSplitter_Lines, StreamSplitter<char>)
 
 BENCHMARK_TEMPLATE(BM_Searcher_NoComp_LoremIpsum, NaiveSearcher<std::string>)
     ->RangeMultiplier(10)
-    ->Range(1000, 1000000)
+    ->Range(1000, 100000000)
     ->Unit(kMillisecond)
     ->Complexity();
 
 BENCHMARK_TEMPLATE(BM_Searcher_NoComp_LoremIpsum, BoyerMooreSearcher<std::string>)
     ->RangeMultiplier(10)
-    ->Range(1000, 1000000)
+    ->Range(1000, 100000000)
     ->Unit(kMillisecond)
     ->Complexity();
 
 BENCHMARK_TEMPLATE(BM_Searcher_NoComp_LoremIpsum, BoyerMooreSearcher<std::string, searchers::Boosted>)
     ->RangeMultiplier(10)
-    ->Range(1000, 1000000)
+    ->Range(1000, 100000000)
     ->Unit(kMillisecond)
     ->Complexity();
 
 BENCHMARK_TEMPLATE(BM_Searcher_WithComp_LoremIpsum, NaiveSearcher<std::string, decltype(bm_pattern_comparator())>)
     ->RangeMultiplier(10)
-    ->Range(1000, 1000000)
+    ->Range(1000, 100000000)
     ->Unit(kMillisecond)
     ->Complexity();
 
 BENCHMARK_TEMPLATE(BM_Searcher_WithComp_LoremIpsum, BoyerMooreSearcher<std::string, decltype(bm_pattern_comparator())>)
     ->RangeMultiplier(10)
-    ->Range(1000, 1000000)
+    ->Range(1000, 100000000)
     ->Unit(kMillisecond)
     ->Complexity();
 
