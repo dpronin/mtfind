@@ -172,7 +172,8 @@ int round_robin(ChunkReader reader, ChunkTokenizer tokenizer, FindingsNumberSink
         return res;
 
     // send out the final number of findings
-    findings_number_sink(boost::accumulate(handlers, 0, [](auto sum, auto const &item) { return sum + item.size(); }));
+    findings_number_sink(
+        boost::accumulate(handlers, 0, [](auto sum, auto const &handler) { return sum + handler.findings().size(); }));
 
     using ChunksFindingsIterator = typename ChunkHandler::const_iterator;
     using ChunksFindingsRange    = std::pair<ChunksFindingsIterator, ChunksFindingsIterator>;
@@ -180,8 +181,8 @@ int round_robin(ChunkReader reader, ChunkTokenizer tokenizer, FindingsNumberSink
     ChunksFindingsRanges result_ranges;
     result_ranges.reserve(handlers.size());
 
-    boost::transform(handlers, std::back_inserter(result_ranges), [](auto const &findings) {
-        return std::make_pair(findings.begin(), findings.end());
+    boost::transform(handlers, std::back_inserter(result_ranges), [](auto const &handler) {
+        return std::make_pair(handler.findings().begin(), handler.findings().end());
     });
 
     // erase all empty ranges

@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <algorithm>
 
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/range/adaptor/transformed.hpp>
@@ -47,9 +48,7 @@ typename std::enable_if<mtfind::detail::is_random_access_iterator<Iterator>, std
     };
 
     // all the next code lines are dedicated to fairly dividing the region among tasks
-    auto data_chunk_size = std::distance(start, end) / tasks_number;
-    if (0 == data_chunk_size)
-        data_chunk_size = 1;
+    auto data_chunk_size = std::max(static_cast<size_t>(1), std::distance(start, end) / tasks_number);
 
     // a helper for seeking a nearest delimiter symbol
     auto find_next_nl = [=](auto first) {

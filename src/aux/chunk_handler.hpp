@@ -40,15 +40,6 @@ public:
     auto &findings() noexcept { return findings_; }
     auto const &findings() const noexcept { return findings_; }
 
-    auto begin() const noexcept { return findings_.begin(); }
-    auto begin() noexcept { return findings_.begin(); }
-
-    auto end() const noexcept { return findings_.end(); }
-    auto end() noexcept { return findings_.end(); }
-
-    bool empty() const noexcept { return findings_.empty(); }
-    auto size() const noexcept { return findings_.size(); }
-
 protected:
     Tokenizer tokenizer_;
     Container findings_;
