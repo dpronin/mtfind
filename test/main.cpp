@@ -81,7 +81,7 @@ struct StreamSplitterTest : public Test
 {
 };
 
-using StreamSplitters = Types<StreamSplitter>;
+using StreamSplitters = Types<StreamSplitter<char>>;
 TYPED_TEST_CASE(StreamSplitterTest, StreamSplitters);
 
 TYPED_TEST(StreamSplitterTest, SplitsStringStreamInLines)
@@ -503,7 +503,7 @@ TEST_F(ParseLoremIpsum, RoundRobinWithStreamedAccessLoremIpsum)
 {
     std::istringstream iss(kLoremIpsum);
     iss >> std::noskipws;
-    StreamSplitter line_splitter(iss, '\n');
+    StreamSplitter<char> line_splitter(iss, '\n');
     FindingsSink<std::string> sink;
     ASSERT_EQ(strat::round_robin(line_splitter, tokenizer_, std::ref(sink), std::thread::hardware_concurrency()), EXIT_SUCCESS);
     validate(sink);
@@ -512,7 +512,7 @@ TEST_F(ParseLoremIpsum, RoundRobinWithStreamedAccessLoremIpsum)
 TEST_F(ParseLoremIpsum, DivideAndConquer)
 {
     FindingsSink<boost::iterator_range<const char *>> sink;
-    ASSERT_EQ(strat::divide_and_conquer(kLoremIpsum, tokenizer_, std::ref(sink), std::thread::hardware_concurrency()), EXIT_SUCCESS);
+    ASSERT_EQ(strat::divide_and_conquer(kLoremIpsum, tokenizer_, std::ref(sink), '\n', std::thread::hardware_concurrency()), EXIT_SUCCESS);
     validate(sink);
 }
 

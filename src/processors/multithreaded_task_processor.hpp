@@ -42,10 +42,7 @@ public:
     /// @tparam     Task
     ///
     template <typename Task>
-    void operator()(Task &&task)
-    {
-        io_.post(std::forward<Task>(task));
-    }
+    void operator()(Task &&task) { io_.post(std::forward<Task>(task)); }
 
     ///
     /// @brief      Runs the processor so that it can schedule and run tasks
@@ -79,20 +76,14 @@ public:
     /// @details    All tasks that have been pushed but not scheduled yet
     ///             are cancelled and not be executed
     ///
-    void stop()
-    {
-        io_.stop();
-    }
+    void stop() { io_.stop(); }
 
     ///
     /// @brief      Gets a number of threads used
     ///
     /// @return     A number of threads
     ///
-    auto workers_count() const noexcept
-    {
-        return workers_.size();
-    }
+    auto workers_count() const noexcept { return workers_.size(); }
 
 private:
     boost::asio::io_service io_;

@@ -49,40 +49,16 @@ public:
         return token;
     }
 
-    operator bool() const noexcept
-    {
-        return !eorange();
-    }
+    operator bool() const noexcept { return !eorange(); }
+    bool operator!() const noexcept { return eorange(); }
+    bool eorange() const noexcept { return eorange_; }
 
-    bool operator!() const noexcept
-    {
-        return eorange();
-    }
+    auto current_pos() const noexcept { return current_pos_; }
 
-    auto current_pos() const noexcept
-    {
-        return current_pos_;
-    }
+    auto bytes_left() const noexcept { return std::distance(current_pos_, last_); }
+    auto size() const noexcept { return std::distance(first_, last_); }
 
-    auto bytes_left() const noexcept
-    {
-        return std::distance(current_pos_, last_);
-    }
-
-    auto size() const noexcept
-    {
-        return std::distance(first_, last_);
-    }
-
-    bool eorange() const noexcept
-    {
-        return eorange_;
-    }
-
-    void reset() noexcept
-    {
-        current_pos_ = first_;
-    }
+    void reset() noexcept { current_pos_ = first_; }
 
 private:
     Iterator first_;
@@ -122,20 +98,9 @@ public:
         }
     }
 
-    operator bool() const noexcept
-    {
-        return !eorange();
-    }
-
-    bool operator!() const noexcept
-    {
-        return eorange();
-    }
-
-    bool eorange() const noexcept
-    {
-        return eorange_;
-    }
+    operator bool() const noexcept { return !eorange(); }
+    bool operator!() const noexcept { return eorange(); }
+    bool eorange() const noexcept { return eorange_; }
 
 private:
     Iterator first_;

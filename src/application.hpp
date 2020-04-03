@@ -28,15 +28,9 @@ public:
             return 0 <= c && c <= 0x7E && '\n' != c && '\r' != c || '?' == c;
         }
 
-        bool has_masked_symbols() const noexcept
-        {
-            return has_masked_symbols_;
-        }
+        bool has_masked_symbols() const noexcept { return has_masked_symbols_; }
 
-        void reset() noexcept
-        {
-            has_masked_symbols_ = false;
-        }
+        void reset() noexcept { has_masked_symbols_ = false; }
 
     private:
         mutable bool has_masked_symbols_ = false;
@@ -57,10 +51,7 @@ public:
     ///
     /// @return     Validator of a pattern
     ///
-    PatternValidator pattern_validator() const noexcept
-    {
-        return {};
-    }
+    PatternValidator pattern_validator() const noexcept { return {}; }
 
     ///
     /// @brief      Prints a help page.

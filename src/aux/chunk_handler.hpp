@@ -37,45 +37,17 @@ public:
                    }));
     }
 
-    auto &findings() noexcept
-    {
-        return findings_;
-    }
+    auto &findings() noexcept { return findings_; }
+    auto const &findings() const noexcept { return findings_; }
 
-    auto const &findings() const noexcept
-    {
-        return findings_;
-    }
+    auto begin() const noexcept { return findings_.begin(); }
+    auto begin() noexcept { return findings_.begin(); }
 
-    auto begin() const noexcept
-    {
-        return findings_.begin();
-    }
+    auto end() const noexcept { return findings_.end(); }
+    auto end() noexcept { return findings_.end(); }
 
-    auto begin() noexcept
-    {
-        return findings_.begin();
-    }
-
-    auto end() const noexcept
-    {
-        return findings_.end();
-    }
-
-    auto end() noexcept
-    {
-        return findings_.end();
-    }
-
-    bool empty() const noexcept
-    {
-        return findings_.empty();
-    }
-
-    auto size() const noexcept
-    {
-        return findings_.size();
-    }
+    bool empty() const noexcept { return findings_.empty(); }
+    auto size() const noexcept { return findings_.size(); }
 
 protected:
     Tokenizer tokenizer_;
@@ -99,16 +71,10 @@ public:
         set_last_chunk_idx(chunk_idx);
     }
 
-    size_t last_chunk_idx() const noexcept
-    {
-        return last_chunk_idx_;
-    }
+    size_t last_chunk_idx() const noexcept { return last_chunk_idx_; }
 
 private:
-    void set_last_chunk_idx(size_t chunk_idx) noexcept
-    {
-        last_chunk_idx_ = chunk_idx + 1;
-    }
+    void set_last_chunk_idx(size_t chunk_idx) noexcept { last_chunk_idx_ = chunk_idx + 1; }
 
 private:
     size_t last_chunk_idx_ = 0;

@@ -52,10 +52,7 @@ public:
     /// @tparam     U any type convertable to Chunk or Chunk itself
     ///
     template <typename U = Chunk>
-    bool operator()(U &&chunk)
-    {
-        return queue_.push(std::forward<U>(chunk));
-    }
+    bool operator()(U &&chunk) { return queue_.push(std::forward<U>(chunk)); }
 
     ///
     /// @brief      Starts the receiver to process chunks by popping from

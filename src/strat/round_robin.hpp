@@ -166,7 +166,6 @@ int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsSink fin
         workers_count = 1;
 
     using ChunkHandler   = mtfind::detail::ChunkHandlerBase<ChunkTokenizer, decltype(reader())>;
-    using data_aligned_t = typename std::aligned_storage<sizeof(ChunkHandler), alignof(ChunkHandler)>::type;
 
     std::vector<ChunkHandler> handlers;
     handlers.reserve(workers_count);

@@ -135,7 +135,7 @@ BENCHMARK_TEMPLATE(BM_RangeSplitter_Lines, RangeSplitter<std::string::const_iter
     ->Unit(kMillisecond)
     ->Complexity(oN);
 
-BENCHMARK_TEMPLATE(BM_StreamSplitter_Lines, StreamSplitter)
+BENCHMARK_TEMPLATE(BM_StreamSplitter_Lines, StreamSplitter<char>)
     ->RangeMultiplier(10)
     ->Range(1000, 10000000)
     ->Unit(kMillisecond)
