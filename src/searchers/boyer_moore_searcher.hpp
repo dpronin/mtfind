@@ -41,6 +41,16 @@ public:
     explicit BoyerMooreSearcher(Pattern pattern, Comparator comp = Comparator()) noexcept
         : pattern_(pattern), comp_(comp)
     {
+        pattern_offsets_.fill(-1);
+        // Fill distances to the last occurrence of the characters
+        // with respect to the comparator verdict
+        for (int_fast32_t i = 0; i < static_cast<int_fast32_t>(pattern.size()); i++)
+        {
+            auto const p = pattern[i];
+            for (int c = 0; c < kMaxChars; ++c)
+                if (comp(c, p))
+                    pattern_offsets_[c] = i;
+        }
     }
 
     ///
@@ -67,10 +77,9 @@ public:
             auto mism = std::mismatch(pattern_.rbegin(), pattern_.rend(), std::make_reverse_iterator(end_range), [&](auto p, auto c) { return comp_(c, p); });
             if (pattern_.rend() != mism.first)
             {
-                auto pat_rit2 = std::next(mism.first);
-                while (pattern_.rend() != pat_rit2 && !comp_(*mism.second, *pat_rit2))
-                    ++pat_rit2;
-                first = std::next(first, std::distance(mism.first, pat_rit2));
+                auto const offset     = std::distance(mism.first, pattern_.rend()) - 1;
+                auto const pat_offset = pattern_offsets_[*mism.second];
+                first                 = std::next(first, offset - (offset > pat_offset ? pat_offset : -1));
             }
             else
             {
@@ -100,6 +109,9 @@ public:
 private:
     Pattern pattern_;
     Comparator comp_;
+
+    static constexpr size_t kMaxChars = 256;
+    std::array<int_fast32_t, kMaxChars> pattern_offsets_;
 };
 
 ///
@@ -124,7 +136,7 @@ public:
     {
         pattern_offsets_.fill(-1);
         // Fill distances to the last occurrence of the characters
-        for (int_fast32_t i = 0; i < pattern_.size(); i++)
+        for (int_fast32_t i = 0; i < static_cast<int_fast32_t>(pattern_.size()); i++)
             pattern_offsets_[pattern_[i]] = i;
     }
 
@@ -179,9 +191,9 @@ public:
     }
 
 private:
-    static constexpr size_t kMaxChars = 256;
-
     Pattern pattern_;
+
+    static constexpr size_t kMaxChars = 256;
     std::array<int_fast32_t, kMaxChars> pattern_offsets_;
 };
 
