@@ -28,7 +28,7 @@ namespace detail
 {
 
 template <typename Iterator, typename HandlerGenerator, typename ValueType = typename std::iterator_traits<Iterator>::value_type, typename Task = std::function<void()>>
-typename std::enable_if<mtfind::detail::is_random_access_char_iterator<Iterator>, std::vector<Task>>::type
+typename std::enable_if<mtfind::detail::is_random_access_iterator<Iterator>, std::vector<Task>>::type
     generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_number, HandlerGenerator handler_generator, ValueType const &delim = ValueType(), bool process_empty_chunks = false)
 {
     std::vector<Task> tasks;
@@ -117,7 +117,7 @@ typename std::enable_if<mtfind::detail::is_random_access_char_iterator<Iterator>
 /// @return     0 in case of success, any other values otherwise
 ///
 template <typename Iterator, typename ChunkTokenizer, typename ChunkFindingsSink, typename ValueType = typename std::iterator_traits<Iterator>::value_type>
-typename std::enable_if<mtfind::detail::is_random_access_char_iterator<Iterator>, int>::type
+typename std::enable_if<mtfind::detail::is_random_access_iterator<Iterator>, int>::type
     divide_and_conquer(Iterator first, Iterator last, ChunkTokenizer tokenizer, ChunkFindingsSink &&findings_sink, ValueType const &delim = ValueType(), size_t workers_count = std::thread::hardware_concurrency())
 {
     if (0 == workers_count)

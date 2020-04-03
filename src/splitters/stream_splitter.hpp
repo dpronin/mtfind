@@ -3,6 +3,7 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <iterator>
 
 #include "splitters/range_splitter.hpp"
 
@@ -49,7 +50,7 @@ public:
     /// @return     The token
     ///
     template <typename U = ValueType>
-    typename std::enable_if<!std::is_same<U, char>::value, std::string>::type
+    typename std::enable_if<!std::is_same<U, char>::value, std::vector<ValueType>>::type
         operator()()
     {
         // @info you can use std::getline here instead of using Range-based splitter
@@ -73,7 +74,7 @@ public:
     bool operator!() const noexcept { return !splitter_; }
 
 private:
-    RangeSplitter<std::istream_iterator<char>> splitter_;
+    RangeSplitter<std::istream_iterator<ValueType>> splitter_;
 };
 
 } // namespace mtfind

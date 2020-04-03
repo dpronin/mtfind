@@ -61,10 +61,10 @@ public:
     void reset() noexcept { current_pos_ = first_; }
 
 private:
-    Iterator first_;
-    Iterator last_;
-    Iterator current_pos_;
-    char delim_;
+    Iterator   first_;
+    Iterator   last_;
+    Iterator   current_pos_;
+    value_type delim_;
     bool eorange_ = false;
 };
 
@@ -103,9 +103,9 @@ public:
     bool eorange() const noexcept { return eorange_; }
 
 private:
-    Iterator first_;
-    Iterator last_;
-    char delim_;
+    Iterator   first_;
+    Iterator   last_;
+    value_type delim_;
     bool eorange_ = false;
 };
 
