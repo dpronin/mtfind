@@ -29,12 +29,7 @@ namespace detail
 
 template <typename Iterator, typename HandlerGenerator, typename ValueType = typename std::iterator_traits<Iterator>::value_type, typename Task = std::function<void()>>
 typename std::enable_if<mtfind::detail::is_random_access_char_iterator<Iterator>, std::vector<Task>>::type
-    generate_chunk_handlers_tasks(Iterator start,
-        Iterator end,
-        size_t tasks_number,
-        HandlerGenerator handler_generator,
-        ValueType const &delim = ValueType(),
-        bool process_empty_chunks = false)
+    generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_number, HandlerGenerator handler_generator, ValueType const &delim = ValueType(), bool process_empty_chunks = false)
 {
     std::vector<Task> tasks;
 
@@ -123,17 +118,12 @@ typename std::enable_if<mtfind::detail::is_random_access_char_iterator<Iterator>
 ///
 template <typename Iterator, typename ChunkTokenizer, typename ChunkFindingsSink, typename ValueType = typename std::iterator_traits<Iterator>::value_type>
 typename std::enable_if<mtfind::detail::is_random_access_char_iterator<Iterator>, int>::type
-    divide_and_conquer(Iterator first,
-        Iterator last,
-        ChunkTokenizer tokenizer,
-        ChunkFindingsSink &&findings_sink,
-        ValueType const &delim = ValueType(),
-        size_t workers_count = std::thread::hardware_concurrency())
+    divide_and_conquer(Iterator first, Iterator last, ChunkTokenizer tokenizer, ChunkFindingsSink &&findings_sink, ValueType const &delim = ValueType(), size_t workers_count = std::thread::hardware_concurrency())
 {
     if (0 == workers_count)
         workers_count = 1;
 
-    using ChunkHandler   = mtfind::detail::ChunkHandler<ChunkTokenizer, boost::iterator_range<Iterator>>;
+    using ChunkHandler = mtfind::detail::ChunkHandler<ChunkTokenizer, boost::iterator_range<Iterator>>;
 
     std::vector<ChunkHandler> handlers;
     handlers.reserve(workers_count);
@@ -202,16 +192,8 @@ typename std::enable_if<mtfind::detail::is_random_access_char_iterator<Iterator>
 ///
 /// @return     0 in case of success, any other values otherwise
 ///
-template <typename Range,
-    typename ChunkTokenizer,
-    typename ChunkFindingsSink,
-    typename ValueType
-        = typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type>
-decltype(auto) divide_and_conquer(Range const &source_range,
-    ChunkTokenizer tokenizer,
-    ChunkFindingsSink &&findings_sink,
-    ValueType const &delim = ValueType(),
-    size_t workers_count = std::thread::hardware_concurrency())
+template <typename Range, typename ChunkTokenizer, typename ChunkFindingsSink, typename ValueType = typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type>
+decltype(auto) divide_and_conquer(Range const &source_range, ChunkTokenizer tokenizer, ChunkFindingsSink &&findings_sink, ValueType const &delim = ValueType(), size_t workers_count = std::thread::hardware_concurrency())
 {
     return divide_and_conquer(std::begin(source_range), std::end(source_range), tokenizer, std::forward<ChunkFindingsSink>(findings_sink), delim, workers_count);
 }

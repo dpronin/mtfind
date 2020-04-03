@@ -165,7 +165,7 @@ int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsSink fin
     if (0 == workers_count)
         workers_count = 1;
 
-    using ChunkHandler   = mtfind::detail::ChunkHandlerBase<ChunkTokenizer, decltype(reader())>;
+    using ChunkHandler = mtfind::detail::ChunkHandlerBase<ChunkTokenizer, decltype(reader())>;
 
     std::vector<ChunkHandler> handlers;
     handlers.reserve(workers_count);
