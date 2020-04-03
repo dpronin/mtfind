@@ -100,7 +100,8 @@ int process_rr(ChunkReader reader, ChunkHandlerGenerator generator, size_t worke
 
     // round robin handler switching among processors as handling chinks one by one
     auto rr_handler = [&processors, cur_proc = processors.begin()](auto chunk_idx, auto const &value) mutable {
-        while (!(*cur_proc)({chunk_idx, value}))
+        Chunk chunk{chunk_idx, value};
+        while (!(*cur_proc)(chunk))
             ;
         ++cur_proc;
         if (processors.end() == cur_proc)
@@ -194,7 +195,7 @@ int round_robin(ChunkReader reader, ChunkTokenizer tokenizer, FindingsNumberSink
     {
         // find a topleast item between the least items of all the contexts's chunks findings
         auto range_it = boost::min_element(result_ranges, [](auto const &item, auto const &min) {
-            // comparting chunks indices
+            // comparing chunks indices
             return std::get<0>(*item.first) < std::get<0>(*min.first);
         });
 
