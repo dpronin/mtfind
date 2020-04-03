@@ -14,8 +14,6 @@
 #include "searchers/boyer_moore_searcher.hpp"
 #include "searchers/naive_searcher.hpp"
 
-#include "lorem_ipsum.hpp"
-
 using namespace benchmark;
 
 namespace mtfind::bench
