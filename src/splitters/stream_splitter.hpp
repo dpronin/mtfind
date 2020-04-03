@@ -1,9 +1,9 @@
 #pragma once
 
+#include <iterator>
 #include <string>
 #include <type_traits>
 #include <vector>
-#include <iterator>
 
 #include "splitters/range_splitter.hpp"
 

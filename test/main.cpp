@@ -439,7 +439,7 @@ public:
 
 private:
     Container findings_;
-    size_t    findings_number_received_ = 0;
+    size_t findings_number_received_ = 0;
 };
 
 class ParseLoremIpsum : public Test
@@ -457,7 +457,7 @@ protected:
     {
         auto const &findings = sink.findings();
         EXPECT_EQ(sink.findings_number_received(), findings.size());
-        auto exp_line_it     = kExpLinesFindings_.cbegin();
+        auto exp_line_it = kExpLinesFindings_.cbegin();
         for (auto const &finding : findings)
         {
             EXPECT_EQ(std::get<0>(finding), exp_line_it->first);

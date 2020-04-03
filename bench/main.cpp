@@ -2,9 +2,9 @@
 
 #include <algorithm>
 #include <functional>
+#include <random>
 #include <sstream>
 #include <string>
-#include <random>
 
 #include <benchmark/benchmark.h>
 
@@ -76,21 +76,24 @@ void BM_StreamSplitter_Lines(State &state)
 
 namespace
 {
-    auto bm_generate_text(size_t symbols_count)
-    {
-        std::string text;
+auto bm_generate_text(size_t symbols_count)
+{
+    std::string text;
 
-        std::random_device rdev;
-        std::default_random_engine gen{rdev()};
-        std::uniform_int_distribution<char> dist(0, 127);
+    std::random_device rdev;
+    std::default_random_engine gen{rdev()};
+    std::uniform_int_distribution<char> dist(0, 127);
 
-        text.resize(symbols_count);
-        std::generate(text.begin(), text.end(), [&]{ return dist(gen); });
+    text.resize(symbols_count);
+    std::generate(text.begin(), text.end(), [&] { return dist(gen); });
 
-        return text;
-    }
+    return text;
+}
 
-    auto bm_pattern_comparator() { return [](char c, char p) { return '?' == p || c == p; }; }
+auto bm_pattern_comparator()
+{
+    return [](char c, char p) { return '?' == p || c == p; };
+}
 } // anonymous namespace
 
 template <typename SearcherT>
