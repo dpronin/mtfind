@@ -159,8 +159,8 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
 ///
 /// @return     0 in case of success, any other values otherwise
 ///
-template <typename ChunkReader, typename ChunkTokenizer, typename FindingsSink>
-int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsSink findings_sink, size_t workers_count = std::thread::hardware_concurrency())
+template <typename ChunkReader, typename ChunkTokenizer, typename FindingsNumberSink, typename FindingsSink>
+int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsNumberSink &&findings_number_sink, FindingsSink findings_sink, size_t workers_count = std::thread::hardware_concurrency())
 {
     if (0 == workers_count)
         workers_count = 1;
@@ -177,8 +177,8 @@ int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsSink fin
     if (auto const res = detail::process_rr(std::forward<ChunkReader>(reader), chunk_handler_generator, workers_count))
         return res;
 
-    // print out the final results
-    std::cout << boost::accumulate(handlers, 0, [](auto sum, auto const &item) { return sum + item.size(); }) << '\n';
+    // send out the final number of findings
+    findings_number_sink(boost::accumulate(handlers, 0, [](auto sum, auto const &item) { return sum + item.size(); }));
 
     using ChunksFindingsIterator = typename ChunkHandler::const_iterator;
     using ChunksFindingsRange    = std::pair<ChunksFindingsIterator, ChunksFindingsIterator>;
@@ -193,7 +193,7 @@ int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsSink fin
     // erase all empty ranges
     boost::remove_erase_if(result_ranges, [](auto const &findings) { return findings.first == findings.second; });
 
-    // send one by one findings to the sink in ascending order sorted by chunk index
+    // send each finding to the sink in ascending order sorted by chunk index
     // contexts's chunks findings ranges given are sorted ascendingly themselves since RR strategy is used
     // the task is to behave like merge sort algorithm by finding out the minimal-indexed item
     // on each iteration

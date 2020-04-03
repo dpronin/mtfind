@@ -431,18 +431,15 @@ class FindingsSink
 public:
     using Container = detail::ChunksFindings<ValueType>;
 
-    void operator()(typename Container::value_type finding)
-    {
-        findings_.push_back(std::move(finding));
-    }
+    void operator()(typename Container::value_type finding) { findings_.push_back(std::move(finding)); }
+    void operator()(size_t findings_number_received) noexcept { findings_number_received_ = findings_number_received; }
 
-    auto const &findings() const noexcept
-    {
-        return findings_;
-    }
+    auto const &findings() const noexcept { return findings_; }
+    size_t findings_number_received() const noexcept { return findings_number_received_; }
 
 private:
     Container findings_;
+    size_t    findings_number_received_ = 0;
 };
 
 class ParseLoremIpsum : public Test
@@ -459,6 +456,7 @@ protected:
     void validate(FindingsSink<T> const &sink)
     {
         auto const &findings = sink.findings();
+        EXPECT_EQ(sink.findings_number_received(), findings.size());
         auto exp_line_it     = kExpLinesFindings_.cbegin();
         for (auto const &finding : findings)
         {
@@ -495,7 +493,7 @@ TEST_F(ParseLoremIpsum, RoundRobinWithRandomAccessRangeLoremIpsum)
 {
     RangeSplitter<decltype(std::begin(kLoremIpsum))> line_splitter(kLoremIpsum, '\n');
     FindingsSink<boost::iterator_range<const char *>> sink;
-    ASSERT_EQ(strat::round_robin(line_splitter, tokenizer_, std::ref(sink), std::thread::hardware_concurrency()), EXIT_SUCCESS);
+    ASSERT_EQ(strat::round_robin(line_splitter, tokenizer_, std::ref(sink), std::ref(sink), std::thread::hardware_concurrency()), EXIT_SUCCESS);
     validate(sink);
 }
 
@@ -505,14 +503,14 @@ TEST_F(ParseLoremIpsum, RoundRobinWithStreamedAccessLoremIpsum)
     iss >> std::noskipws;
     StreamSplitter<char> line_splitter(iss, '\n');
     FindingsSink<std::string> sink;
-    ASSERT_EQ(strat::round_robin(line_splitter, tokenizer_, std::ref(sink), std::thread::hardware_concurrency()), EXIT_SUCCESS);
+    ASSERT_EQ(strat::round_robin(line_splitter, tokenizer_, std::ref(sink), std::ref(sink), std::thread::hardware_concurrency()), EXIT_SUCCESS);
     validate(sink);
 }
 
 TEST_F(ParseLoremIpsum, DivideAndConquer)
 {
     FindingsSink<boost::iterator_range<const char *>> sink;
-    ASSERT_EQ(strat::divide_and_conquer(kLoremIpsum, tokenizer_, std::ref(sink), '\n', std::thread::hardware_concurrency()), EXIT_SUCCESS);
+    ASSERT_EQ(strat::divide_and_conquer(kLoremIpsum, tokenizer_, std::ref(sink), std::ref(sink), '\n', std::thread::hardware_concurrency()), EXIT_SUCCESS);
     validate(sink);
 }
 

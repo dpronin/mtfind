@@ -112,13 +112,13 @@ typename std::enable_if<mtfind::detail::is_random_access_iterator<Iterator>, std
 ///
 /// @tparam     Iterator             A RAI iterator
 /// @tparam     ChunkTokenizer       A functor like tokenizer for a chunk
-/// @tparam     ChunkFindingsSink    A functor-like sink type
+/// @tparam     FindingsSink         A functor-like sink type
 ///
 /// @return     0 in case of success, any other values otherwise
 ///
-template <typename Iterator, typename ChunkTokenizer, typename ChunkFindingsSink, typename ValueType = typename std::iterator_traits<Iterator>::value_type>
+template <typename Iterator, typename ChunkTokenizer, typename FindingsNumberSink, typename FindingsSink, typename ValueType = typename std::iterator_traits<Iterator>::value_type>
 typename std::enable_if<mtfind::detail::is_random_access_iterator<Iterator>, int>::type
-    divide_and_conquer(Iterator first, Iterator last, ChunkTokenizer tokenizer, ChunkFindingsSink &&findings_sink, ValueType const &delim = ValueType(), size_t workers_count = std::thread::hardware_concurrency())
+    divide_and_conquer(Iterator first, Iterator last, ChunkTokenizer tokenizer, FindingsNumberSink &&findings_number_sink, FindingsSink &&findings_sink, ValueType const &delim = ValueType(), size_t workers_count = std::thread::hardware_concurrency())
 {
     if (0 == workers_count)
         workers_count = 1;
@@ -145,9 +145,9 @@ typename std::enable_if<mtfind::detail::is_random_access_iterator<Iterator>, int
     // wait for the workers of the task processor to finish
     task_processor.wait();
 
-    // print out the final results
     auto all_findings = handlers | boost::adaptors::transformed([](auto const &handler) { return handler.findings(); });
-    std::cout << boost::accumulate(all_findings, 0, [](auto sum, auto const &findings) { return sum + findings.size(); }) << '\n';
+    // send out the final number of findings
+    findings_number_sink(boost::accumulate(all_findings, 0, [](auto sum, auto const &findings) { return sum + findings.size(); }));
 
     // chunk offset is necessary for adjusting chunk indices given by every worker
     // that has started from chunk index 1
@@ -188,14 +188,14 @@ typename std::enable_if<mtfind::detail::is_random_access_iterator<Iterator>, int
 ///
 /// @tparam     Range               Range
 /// @tparam     ChunkTokenizer      A Functor like tokenizer for a chunk
-/// @tparam     ChunkFindingsSink   A Functor-like sink type
+/// @tparam     FindingsSink   A Functor-like sink type
 ///
 /// @return     0 in case of success, any other values otherwise
 ///
-template <typename Range, typename ChunkTokenizer, typename ChunkFindingsSink, typename ValueType = typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type>
-decltype(auto) divide_and_conquer(Range const &source_range, ChunkTokenizer tokenizer, ChunkFindingsSink &&findings_sink, ValueType const &delim = ValueType(), size_t workers_count = std::thread::hardware_concurrency())
+template <typename Range, typename ChunkTokenizer, typename FindingsNumberSink, typename FindingsSink, typename ValueType = typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type>
+decltype(auto) divide_and_conquer(Range const &source_range, ChunkTokenizer tokenizer, FindingsNumberSink &&findings_number_sink, FindingsSink &&findings_sink, ValueType const &delim = ValueType(), size_t workers_count = std::thread::hardware_concurrency())
 {
-    return divide_and_conquer(std::begin(source_range), std::end(source_range), tokenizer, std::forward<ChunkFindingsSink>(findings_sink), delim, workers_count);
+    return divide_and_conquer(std::begin(source_range), std::end(source_range), tokenizer, std::forward<FindingsNumberSink>(findings_number_sink), std::forward<FindingsSink>(findings_sink), delim, workers_count);
 }
 
 } // namespace mtfind::strat

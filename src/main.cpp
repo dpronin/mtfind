@@ -42,6 +42,11 @@ int streamed_run(std::istream &is, Args &&... args)
 template <typename PatternSearcher>
 int run(boost::string_view const input_path, PatternSearcher &&searcher)
 {
+    // the function printing out the overall number of findings
+    auto line_findings_number_sink = [](auto findings_number) {
+        std::cout << findings_number << '\n';
+    };
+
     // the function printing out the findings for a line
     auto line_findings_sink = [](auto const &line_finding) {
         /*                     line number          */
@@ -107,14 +112,14 @@ int run(boost::string_view const input_path, PatternSearcher &&searcher)
                 return EXIT_FAILURE;
             }
 
-            return streamed_run(stream_source_file, tokenizer, line_findings_sink);
+            return streamed_run(stream_source_file, tokenizer, line_findings_number_sink, line_findings_sink);
         }
         else
         {
             // @info for debug purposes there has been used RR for a mapped file
             // actually it works a little bit slower than deviding and conquering in case of having SSD
-            // return strat::round_robin(RangeSplitter<decltype(mmap_source_file.begin())>(mmap_source_file, '\n'), tokenizer, line_findings_sink)
-            return strat::divide_and_conquer(mmap_source_file, tokenizer, line_findings_sink, '\n');
+            // return strat::round_robin(RangeSplitter<decltype(mmap_source_file.begin())>(mmap_source_file, '\n'), tokenizer, line_findings_number_sink, line_findings_sink)
+            return strat::divide_and_conquer(mmap_source_file, tokenizer, line_findings_number_sink, line_findings_sink, '\n');
         }
     }
     else
@@ -123,7 +128,7 @@ int run(boost::string_view const input_path, PatternSearcher &&searcher)
         // it can be done since no scanf-like functions are used in the application
         // it could slightly increase performance
         std::cin.sync_with_stdio(false);
-        return streamed_run(std::cin, tokenizer, line_findings_sink);
+        return streamed_run(std::cin, tokenizer, line_findings_number_sink, line_findings_sink);
     }
 }
 
