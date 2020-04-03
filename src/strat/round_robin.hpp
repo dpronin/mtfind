@@ -147,15 +147,17 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
 ///             iterates over the workers passing them chunks with their indices, no synchronization
 ///             is required
 ///
-/// @param[in]  reader         A functor-like object that would be called to receive a chunk
-///                            The reader is called until it is exhausted, what it is checked by calling operator!()
-/// @param[in]  tokenizer      A tokenizer being called on each chunk to receive findings
-/// @param[in]  findings_sink  A sink for chunk findings
-/// @param[in]  workers_count  A number of threads to use
+/// @param[in]  reader               A functor-like object that would be called to receive a chunk
+///                                  The reader is called until it is exhausted, what it is checked by calling operator!()
+/// @param[in]  tokenizer            A tokenizer being called on each chunk to receive findings
+/// @param[in]  findings_number_sink A sink for overall number of findings
+/// @param[in]  findings_sink        A sink for chunk findings
+/// @param[in]  workers_count        A number of threads to use
 ///
-/// @tparam     ChunkReader    A reader that will be fetching a chunk until reader's source has depleted
-/// @tparam     ChunkTokenizer A functor like tokenizer for a chunk fetched
-/// @tparam     FindingsSink   A functor-like sink type for a chunk finding
+/// @tparam     ChunkReader          A reader that will be fetching a chunk until reader's source has depleted
+/// @tparam     ChunkTokenizer       A functor like tokenizer for a chunk fetched
+/// @tparam     FindingsNumberSink   A functor-like sink type for overall number of findings
+/// @tparam     FindingsSink         A functor-like sink type for a chunk finding
 ///
 /// @return     0 in case of success, any other values otherwise
 ///

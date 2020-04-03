@@ -106,13 +106,15 @@ typename std::enable_if<mtfind::detail::is_random_access_iterator<Iterator>, std
 /// @param[in]  first                A RAI to the first of the region
 /// @param[in]  last                 A RAI to the past the last of the region
 /// @param[in]  tokenizer            A tokenizer being called on each chunk
+/// @param[in]  findings_number_sink A sink for overall number of findings
 /// @param[in]  chunk_findings_sink  A sink for chunk findings
 /// @param[in]  delim                A delimiter for separating chunks from each other
 /// @param[in]  workers_count        A number of threads to use
 ///
 /// @tparam     Iterator             A RAI iterator
 /// @tparam     ChunkTokenizer       A functor like tokenizer for a chunk
-/// @tparam     FindingsSink         A functor-like sink type
+/// @tparam     FindingsNumberSink   A functor-like sink type for overall number of findings
+/// @tparam     FindingsSink         A functor-like sink type for a chunk finding
 ///
 /// @return     0 in case of success, any other values otherwise
 ///
@@ -180,15 +182,17 @@ typename std::enable_if<mtfind::detail::is_random_access_iterator<Iterator>, int
 ///             subregions and pass each of them in a separate worker thread, no synchronization
 ///             is required
 ///
-/// @param[in]  source_range   A Range of the source region
-/// @param[in]  tokenizer      A tokenizer being called on each chunk
-/// @param[in]  findings_sink  A sink for chunk findings
-/// @param[in]  delim          A delimiter for separating chunks from each other
-/// @param[in]  workers_count  A number of threads to use
+/// @param[in]  source_range         A Range of the source region
+/// @param[in]  tokenizer            A tokenizer being called on each chunk
+/// @param[in]  findings_number_sink A sink for overall number of findings
+/// @param[in]  findings_sink        A sink for chunk findings
+/// @param[in]  delim                A delimiter for separating chunks from each other
+/// @param[in]  workers_count        A number of threads to use
 ///
-/// @tparam     Range               Range
-/// @tparam     ChunkTokenizer      A Functor like tokenizer for a chunk
-/// @tparam     FindingsSink   A Functor-like sink type
+/// @tparam     Range                Range
+/// @tparam     ChunkTokenizer       A Functor like tokenizer for a chunk
+/// @tparam     FindingsNumberSink   A functor-like sink type for overall number of findings
+/// @tparam     FindingsSink         A Functor-like sink type for a chunk finding
 ///
 /// @return     0 in case of success, any other values otherwise
 ///
