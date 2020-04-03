@@ -9,7 +9,7 @@ bash> git clone git@github.com:dannftk/mtfind.git
     ```
     To use __pip__ you need to install __python__ interpreter. I highly recommend to install __python3__-based versions in order to avoid unexpected results with __conan__ 
 
-- A C++ compiler with __C++14__ and __boost-1.65.1__ support. The package has been successfully tested on compilation with __gcc-9.2__ (g++ with libstdc++11)
+- A C++ compiler with __C++14__ and __boost-1.65.1__, __gtest-1.8__, __google-benchmark-1.5__ support. The package has been successfully tested on compilation with __gcc-9.2__ (g++ with libstdc++11)
 
 # Preparing with conan
 First you need to set __conan's remote list__ to be able to download packages prescribed in the `conanfile.py` as requirements (dependencies). You need at least two remotes known by conan. We need __conan-center__ and __bincrafters__ repositories available. To check them if they already exist run the following command:
@@ -64,15 +64,19 @@ The project is configured. To built it run:
 ```bash
 bash> cmake --build .
 ```
-To enable building __unit tests__, provide an additional parameter `-DENABLE_TEST=ON` to __cmake__ while configuring
+To enable building __unit and integrational tests__, provide an additional parameter `-DENABLE_TEST=ON` to __cmake__ while configuring
+
+To enable building __benchmarks__, provide an additional parameter `-DENABLE_BENCH=ON` to __cmake__ while configuring
+
+There are more parameters you can provide to cmake
 
 If the compilation's finished successfully, in the directory `${project_root}/debug/bin/` you will find `mtfind` binary. In case tests have been enabled and built you will also find `mtfind_test` binary alongside
 
 To configure project in __Release mode__ provide `-DCMAKE_BUILD_TYPE=Release` instead of `-DCMAKE_BUILD_TYPE=Debug`
 
-Release version accomplishes better performance results
+__Release__ version accomplishes better performance results
 
-Run the application with the example given in the task.txt:
+Run the application with the example given in the __task.txt__ located in the root of the project:
 ```bash
 bash> cd ${project_root}/debug/bin/
 bash> ./mtfind ../../input.txt "?ad"
