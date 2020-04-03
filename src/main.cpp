@@ -57,8 +57,7 @@ int run(boost::string_view const input_path, PatternSearcher &&searcher)
                   << std::get<2>(line_finding) << '\n';
     };
 
-    // define and construct a tokenizer based on the searcher finding subranges
-    // those will be extracted using the searcher constructed and based on the PatternSearcher type
+    // define a tokenizer based on the searcher finding subranges
     using Tokenizer = RangeTokenizer<PatternSearcher>;
     Tokenizer tokenizer(std::forward<PatternSearcher>(searcher));
 

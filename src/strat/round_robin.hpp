@@ -38,33 +38,21 @@ struct RRChunk
 };
 
 template <typename ChunkReader, typename ChunkHandler>
-int process_rr(ChunkReader &&reader, ChunkHandler handler, bool process_empty_chunks = false)
+int handle_rr(ChunkReader reader, ChunkHandler handler)
 {
     // process the input produced by the reader chunk by chunk
-    if (process_empty_chunks)
-    {
-        size_t chunk_idx = 0;
-        for (auto chunk = reader(); reader; ++chunk_idx, chunk = reader())
-            handler(chunk_idx, std::move(chunk));
-    }
-    else
-    {
-        size_t chunk_idx = 0;
-        for (auto chunk = reader(); reader; ++chunk_idx, chunk = reader())
-        {
-            if (!chunk.empty())
-                handler(chunk_idx, std::move(chunk));
-        }
-    }
+    size_t chunk_idx = 0;
+    for (auto chunk = reader(); reader; ++chunk_idx, chunk = reader())
+        handler(chunk_idx, std::move(chunk));
     return EXIT_SUCCESS;
 }
 
 template <typename ChunkReader, typename ChunkHandlerGenerator>
-int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t workers_count = 1, bool process_empty_chunks = false)
+int process_rr(ChunkReader reader, ChunkHandlerGenerator generator, size_t workers_count = 1)
 {
-    // one threaded case of solving
+    // this call will run processing the input produced by the reader chunk by chunk in one thread
     if (workers_count < 2)
-        return process_rr(std::forward<ChunkReader>(reader), generator(), process_empty_chunks);
+        return handle_rr(reader, generator());
 
     auto const processors_count = workers_count - 1;
 
@@ -105,11 +93,12 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
     // also will work when the function normally returns
     BOOST_SCOPE_EXIT_ALL(&)
     {
-        // call dtors manually
+        // call dtors manually as placement new is used above
         for (auto &processor : processors)
             processor.~ChunkProcessor();
     };
 
+    // round robin handler switching among processors as handling chinks one by one
     auto rr_handler = [&processors, cur_proc = processors.begin()](auto chunk_idx, auto const &value) mutable {
         while (!(*cur_proc)({chunk_idx, value}))
             ;
@@ -125,7 +114,7 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
     // this call will run processing the input produced by the reader chunk by chunk handing chunks over workers
     // with each new chunk we switch to the next worker, this way we're balancing
     // the load between workers
-    auto const res = process_rr(std::forward<ChunkReader>(reader), rr_handler, process_empty_chunks);
+    auto const res = handle_rr(reader, rr_handler);
 
     // stop chunk processors, wait for the workers to finish
     for (auto &processor : processors)
@@ -139,6 +128,7 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
 ///
 /// @brief      Process and parse with a tokenizer each chunk that the reader returns
 ///             All the findings will be given to a sink callback in chunk index ascending order
+///             The number of findings will be passed to the sink for number of findings
 ///             Strategy 'Round-Robin' is used
 ///
 /// @details    Round-Robin approach is about distributing the load among the workers
@@ -162,7 +152,7 @@ int process_rr(ChunkReader &&reader, ChunkHandlerGenerator generator, size_t wor
 /// @return     0 in case of success, any other values otherwise
 ///
 template <typename ChunkReader, typename ChunkTokenizer, typename FindingsNumberSink, typename FindingsSink>
-int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsNumberSink &&findings_number_sink, FindingsSink findings_sink, size_t workers_count = std::thread::hardware_concurrency())
+int round_robin(ChunkReader reader, ChunkTokenizer tokenizer, FindingsNumberSink findings_number_sink, FindingsSink findings_sink, size_t workers_count = std::thread::hardware_concurrency())
 {
     if (0 == workers_count)
         workers_count = 1;
@@ -173,10 +163,11 @@ int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsNumberSi
     handlers.reserve(workers_count);
     std::generate_n(std::back_inserter(handlers), workers_count, [tokenizer]() mutable { return ChunkHandler(tokenizer); });
 
-    // generators of handlers of the chunks being read
+    // generator of handlers of the chunks being read
+    // each worker will be resulting in its own handler
     auto chunk_handler_generator = [cur_handler = handlers.begin()]() mutable { return std::ref(*cur_handler++); };
 
-    if (auto const res = detail::process_rr(std::forward<ChunkReader>(reader), chunk_handler_generator, workers_count))
+    if (auto const res = detail::process_rr(reader, chunk_handler_generator, workers_count))
         return res;
 
     // send out the final number of findings
@@ -203,6 +194,7 @@ int round_robin(ChunkReader &&reader, ChunkTokenizer tokenizer, FindingsNumberSi
     {
         // find a topleast item between the least items of all the contexts's chunks findings
         auto range_it = boost::min_element(result_ranges, [](auto const &item, auto const &min) {
+            // comparting chunks indices
             return std::get<0>(*item.first) < std::get<0>(*min.first);
         });
 

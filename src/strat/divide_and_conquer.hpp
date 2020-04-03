@@ -29,42 +29,22 @@ namespace detail
 
 template <typename Iterator, typename HandlerGenerator, typename ValueType = typename std::iterator_traits<Iterator>::value_type, typename Task = std::function<void()>>
 typename std::enable_if<mtfind::detail::is_random_access_iterator<Iterator>, std::vector<Task>>::type
-    generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_number, HandlerGenerator handler_generator, ValueType const &delim = ValueType(), bool process_empty_chunks = false)
+    generate_chunk_handlers_tasks(Iterator start, Iterator end, size_t tasks_number, HandlerGenerator handler_generator, ValueType const &delim = ValueType())
 {
     std::vector<Task> tasks;
 
     if (0 == tasks_number)
         return tasks;
 
-    std::function<Task(Iterator, Iterator, decltype(handler_generator()))> task_generator;
-
-    if (process_empty_chunks)
-    {
-        task_generator = [=](auto first, auto last, auto handler) {
-            return [=]() mutable {
-                RangeSplitter<Iterator> splitter(first, last, delim);
-                size_t chunk_idx = 0;
-                // process the input produced by the splitter chunk by chunk
-                for (auto chunk = splitter(); splitter; ++chunk_idx, chunk = splitter())
-                    handler(chunk_idx, std::move(chunk));
-            };
+    auto task_generator = [=](auto first, auto last, auto handler) {
+        return [=]() mutable {
+            RangeSplitter<Iterator> splitter(first, last, delim);
+            size_t chunk_idx = 0;
+            // process the input produced by the splitter chunk by chunk
+            for (auto chunk = splitter(); splitter; ++chunk_idx, chunk = splitter())
+                handler(chunk_idx, std::move(chunk));
         };
-    }
-    else
-    {
-        task_generator = [=](auto first, auto last, auto handler) {
-            return [=]() mutable {
-                RangeSplitter<Iterator> splitter(first, last, delim);
-                size_t chunk_idx = 0;
-                // process the input produced by the splitter chunk by chunk
-                for (auto chunk = splitter(); splitter; ++chunk_idx, chunk = splitter())
-                {
-                    if (!chunk.empty())
-                        handler(chunk_idx, std::move(chunk));
-                };
-            };
-        };
-    }
+    };
 
     // all the next code lines are dedicated to fairly dividing the region among tasks
     auto data_chunk_size = std::distance(start, end) / tasks_number;
@@ -97,6 +77,7 @@ typename std::enable_if<mtfind::detail::is_random_access_iterator<Iterator>, std
 ///
 /// @brief      Process and parse with a tokenizer each chunk of the region provided by a range
 ///             All the findings will be provided via a sink callback in chunk index ascending order
+///             The number of findings will be passed to the sink for number of findings
 ///             Strategy Divide-and-Conquer is used
 ///
 /// @details    Divide-and-Conquer approach is about dividing the region into equal-length
@@ -120,7 +101,7 @@ typename std::enable_if<mtfind::detail::is_random_access_iterator<Iterator>, std
 ///
 template <typename Iterator, typename ChunkTokenizer, typename FindingsNumberSink, typename FindingsSink, typename ValueType = typename std::iterator_traits<Iterator>::value_type>
 typename std::enable_if<mtfind::detail::is_random_access_iterator<Iterator>, int>::type
-    divide_and_conquer(Iterator first, Iterator last, ChunkTokenizer tokenizer, FindingsNumberSink &&findings_number_sink, FindingsSink &&findings_sink, ValueType const &delim = ValueType(), size_t workers_count = std::thread::hardware_concurrency())
+    divide_and_conquer(Iterator first, Iterator last, ChunkTokenizer tokenizer, FindingsNumberSink findings_number_sink, FindingsSink findings_sink, ValueType const &delim = ValueType(), size_t workers_count = std::thread::hardware_concurrency())
 {
     if (0 == workers_count)
         workers_count = 1;
@@ -137,7 +118,7 @@ typename std::enable_if<mtfind::detail::is_random_access_iterator<Iterator>, int
     MultithreadedTaskProcessor task_processor(workers_count);
 
     // generate tasks responsible for processing different equal-lengthed regions of the underlying range
-    auto tasks = detail::generate_chunk_handlers_tasks(first, last, task_processor.workers_count(), chunk_handler_generator, delim, true);
+    auto tasks = detail::generate_chunk_handlers_tasks(first, last, task_processor.workers_count(), chunk_handler_generator, delim);
 
     // run the task processor up
     task_processor.run();
@@ -197,9 +178,9 @@ typename std::enable_if<mtfind::detail::is_random_access_iterator<Iterator>, int
 /// @return     0 in case of success, any other values otherwise
 ///
 template <typename Range, typename ChunkTokenizer, typename FindingsNumberSink, typename FindingsSink, typename ValueType = typename std::iterator_traits<decltype(std::begin(std::declval<Range>()))>::value_type>
-decltype(auto) divide_and_conquer(Range const &source_range, ChunkTokenizer tokenizer, FindingsNumberSink &&findings_number_sink, FindingsSink &&findings_sink, ValueType const &delim = ValueType(), size_t workers_count = std::thread::hardware_concurrency())
+decltype(auto) divide_and_conquer(Range const &source_range, ChunkTokenizer tokenizer, FindingsNumberSink findings_number_sink, FindingsSink findings_sink, ValueType const &delim = ValueType(), size_t workers_count = std::thread::hardware_concurrency())
 {
-    return divide_and_conquer(std::begin(source_range), std::end(source_range), tokenizer, std::forward<FindingsNumberSink>(findings_number_sink), std::forward<FindingsSink>(findings_sink), delim, workers_count);
+    return divide_and_conquer(std::begin(source_range), std::end(source_range), tokenizer, findings_number_sink, findings_sink, delim, workers_count);
 }
 
 } // namespace mtfind::strat
