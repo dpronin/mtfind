@@ -97,13 +97,13 @@ auto bm_pattern_comparator()
 } // anonymous namespace
 
 template <typename SearcherT>
-void BM_Searcher_NoComp_LoremIpsum(State &state)
+void BM_Searcher_NoComp(State &state)
 {
     size_t symbols_count = state.range(0);
 
-    std::string pattern(10, '\0');
     std::string const text = bm_generate_text(symbols_count);
-    std::copy_n(text.rbegin(), std::min(text.size(), pattern.size()), pattern.rbegin());
+    std::string pattern(std::min(text.size(), static_cast<size_t>(10)), '\0');
+    std::copy_n(text.rbegin(), pattern.size(), pattern.rbegin());
     SearcherT searcher(pattern);
 
     for (auto _ : state)
@@ -117,13 +117,13 @@ void BM_Searcher_NoComp_LoremIpsum(State &state)
 }
 
 template <typename SearcherT>
-void BM_Searcher_WithComp_LoremIpsum(State &state)
+void BM_Searcher_WithComp(State &state)
 {
     size_t symbols_count = state.range(0);
 
-    std::string pattern(10, '?');
-    std::string const text = bm_generate_text(state.range(0));
-    std::copy_n(text.rbegin(), std::min(text.size(), pattern.size() - 1), pattern.rbegin());
+    std::string const text = bm_generate_text(symbols_count);
+    std::string pattern(std::min(text.size(), static_cast<size_t>(10)), '?');
+    std::copy_n(text.rbegin(), pattern.size() - 1, pattern.rbegin());
     SearcherT searcher(pattern, bm_pattern_comparator());
 
     for (auto _ : state)
@@ -148,31 +148,31 @@ BENCHMARK_TEMPLATE(BM_StreamSplitter_Lines, StreamSplitter<char>)
     ->Unit(kMillisecond)
     ->Complexity(oN);
 
-BENCHMARK_TEMPLATE(BM_Searcher_NoComp_LoremIpsum, NaiveSearcher<std::string>)
+BENCHMARK_TEMPLATE(BM_Searcher_NoComp, NaiveSearcher<std::string>)
     ->RangeMultiplier(10)
     ->Range(1000, 100000000)
     ->Unit(kMillisecond)
     ->Complexity();
 
-BENCHMARK_TEMPLATE(BM_Searcher_NoComp_LoremIpsum, BoyerMooreSearcher<std::string>)
+BENCHMARK_TEMPLATE(BM_Searcher_NoComp, BoyerMooreSearcher<std::string>)
     ->RangeMultiplier(10)
     ->Range(1000, 100000000)
     ->Unit(kMillisecond)
     ->Complexity();
 
-BENCHMARK_TEMPLATE(BM_Searcher_NoComp_LoremIpsum, BoyerMooreSearcher<std::string, searchers::Boosted>)
+BENCHMARK_TEMPLATE(BM_Searcher_NoComp, BoyerMooreSearcher<std::string, searchers::Boosted>)
     ->RangeMultiplier(10)
     ->Range(1000, 100000000)
     ->Unit(kMillisecond)
     ->Complexity();
 
-BENCHMARK_TEMPLATE(BM_Searcher_WithComp_LoremIpsum, NaiveSearcher<std::string, decltype(bm_pattern_comparator())>)
+BENCHMARK_TEMPLATE(BM_Searcher_WithComp, NaiveSearcher<std::string, decltype(bm_pattern_comparator())>)
     ->RangeMultiplier(10)
     ->Range(1000, 100000000)
     ->Unit(kMillisecond)
     ->Complexity();
 
-BENCHMARK_TEMPLATE(BM_Searcher_WithComp_LoremIpsum, BoyerMooreSearcher<std::string, decltype(bm_pattern_comparator())>)
+BENCHMARK_TEMPLATE(BM_Searcher_WithComp, BoyerMooreSearcher<std::string, decltype(bm_pattern_comparator())>)
     ->RangeMultiplier(10)
     ->Range(1000, 100000000)
     ->Unit(kMillisecond)
