@@ -213,6 +213,7 @@ TYPED_TEST(ComparatoredSearcher, SuccessfulPatternLookupWithComparator)
         { "Look up a pattern in this text", "a??",                   comparators[0],   { { "a p",   8 }, { "att", 11 }                } },
         { "Find\n\t\tme\nhere!",            "!?",                    comparators[1],   { { "e\n",   8 }, { "er",  11 }, { "e!", 13  } } },
         { "uuuuuu uuuuuuuuuuut",            "uuu&",                  comparators[2],   { { "uuut", 15 }                               } },
+        { "\xFF""\xFE""\x80""\x81""good",   "?ood",                  comparators[0],   { { "good",  4 }                               } }
     };
     // clang-format on
 
@@ -247,16 +248,18 @@ TYPED_TEST(ComparatoredSearcher, FailedPatternLookupWithComparator)
         [](auto c, auto p){ return false; },                                        // always false binary function
         [](auto c, auto p){ return 'A' <= c && c <= 'Z' && 'a' <= p && p <= 'z'; }, // an arbitrary pattern comparator
         [](auto c, auto p){ return 'u' == p && 'u' != c; },                         // an arbitrary pattern comparator
+        [](auto c, auto p){ return '?' == p || p == c; },                           // the pattern comparator used in the application
     };
     // clang-format on
 
     // clang-format off
     std::vector<std::tuple<std::string, std::string, comparator_t>> const records =
     {
-        /*          input text          */ /* pattern to look up */ /* comparator */
-        { "No matter what text is here",    "no_matter?",            comparators[0] },
-        { "Find\n\t\tme\nhere!",            "Find",                  comparators[1] },
-        { "uuuuuu uuuuuuuuuuut",            "uuu&",                  comparators[2] },
+        /*          input text          */ /* pattern to look up */  /* comparator */
+        { "No matter what text is here",    "no_matter?",             comparators[0] },
+        { "Find\n\t\tme\nhere!",            "Find",                   comparators[1] },
+        { "uuuuuu uuuuuuuuuuut",            "uuu&",                   comparators[2] },
+        { "\xFF""\xFE""\x80""\x81""good",   "g?ud",                   comparators[3] }
     };
     // clang-format on
 
@@ -264,7 +267,7 @@ TYPED_TEST(ComparatoredSearcher, FailedPatternLookupWithComparator)
     {
         auto const &text    = std::get<0>(record);
         auto const &pattern = std::get<1>(record);
-        NaiveSearcher<decltype(pattern), comparator_t> searcher(pattern, std::get<2>(record));
+        SearcherT searcher(pattern, std::get<2>(record));
         auto const token = searcher(text);
         EXPECT_TRUE(token.empty());
         EXPECT_EQ(token.begin(), text.cend());
