@@ -101,8 +101,7 @@ template <typename Iterator, typename ChunkTokenizer, typename FindingsNumberSin
 typename std::enable_if<mtfind::detail::is_random_access_iterator<Iterator>, int>::type
     divide_and_conquer(Iterator first, Iterator last, ChunkTokenizer tokenizer, FindingsNumberSink findings_number_sink, FindingsSink findings_sink, ValueType const &delim = ValueType(), size_t workers_count = std::thread::hardware_concurrency())
 {
-    if (0 == workers_count)
-        workers_count = 1;
+    workers_count = std::max(static_cast<size_t>(1), workers_count);
 
     using ChunkHandler = mtfind::detail::ChunkHandler<ChunkTokenizer, boost::iterator_range<Iterator>>;
 

@@ -155,8 +155,7 @@ int process_rr(ChunkReader reader, ChunkHandlerGenerator generator, size_t worke
 template <typename ChunkReader, typename ChunkTokenizer, typename FindingsNumberSink, typename FindingsSink>
 int round_robin(ChunkReader reader, ChunkTokenizer tokenizer, FindingsNumberSink findings_number_sink, FindingsSink findings_sink, size_t workers_count = std::thread::hardware_concurrency())
 {
-    if (0 == workers_count)
-        workers_count = 1;
+    workers_count = std::max(static_cast<size_t>(1), workers_count);
 
     using ChunkHandler = mtfind::detail::ChunkHandlerBase<ChunkTokenizer, decltype(reader())>;
 
