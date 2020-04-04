@@ -10,6 +10,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <new>
 
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/range/algorithm/min_element.hpp>
