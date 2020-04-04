@@ -68,7 +68,7 @@ public:
     }
 
 private:
-    Pattern pattern_;
+    Pattern    pattern_;
     Comparator comp_;
 };
 

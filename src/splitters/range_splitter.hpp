@@ -60,11 +60,11 @@ public:
     void reset() noexcept { current_pos_ = first_; }
 
 private:
-    Iterator first_;
-    Iterator last_;
-    Iterator current_pos_;
+    Iterator   first_;
+    Iterator   last_;
+    Iterator   current_pos_;
     value_type delim_;
-    bool eorange_ = false;
+    bool       eorange_ = false;
 };
 
 template <typename Iterator>
@@ -102,10 +102,10 @@ public:
     bool eorange() const noexcept { return eorange_; }
 
 private:
-    Iterator first_;
-    Iterator last_;
+    Iterator   first_;
+    Iterator   last_;
     value_type delim_;
-    bool eorange_ = false;
+    bool       eorange_ = false;
 };
 
 } // namespace mtfind

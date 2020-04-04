@@ -107,10 +107,10 @@ public:
     }
 
 private:
-    Pattern pattern_;
+    Pattern    pattern_;
     Comparator comp_;
 
-    static constexpr size_t kMaxChars = 256;
+    static constexpr size_t             kMaxChars = 256;
     std::array<int_fast32_t, kMaxChars> pattern_offsets_;
 };
 
@@ -193,7 +193,7 @@ public:
 private:
     Pattern pattern_;
 
-    static constexpr size_t kMaxChars = 256;
+    static constexpr size_t             kMaxChars = 256;
     std::array<int_fast32_t, kMaxChars> pattern_offsets_;
 };
 
@@ -247,7 +247,7 @@ public:
     }
 
 private:
-    Pattern pattern_;
+    Pattern                                                       pattern_;
     boost::algorithm::boyer_moore<decltype(std::begin(pattern_))> searcher_;
 };
 

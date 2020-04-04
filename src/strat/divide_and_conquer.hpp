@@ -2,6 +2,7 @@
 
 #include <cstddef>
 
+#include <algorithm>
 #include <functional>
 #include <iterator>
 #include <memory>
@@ -9,7 +10,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <algorithm>
 
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/iterator_range.hpp>
@@ -39,7 +39,7 @@ typename std::enable_if<mtfind::detail::is_random_access_iterator<Iterator>, std
     auto task_generator = [=](auto first, auto last, auto handler) {
         return [=]() mutable {
             RangeSplitter<Iterator> splitter(first, last, delim);
-            size_t chunk_idx = 0;
+            size_t                  chunk_idx = 0;
             // process the input produced by the splitter chunk by chunk
             for (auto chunk = splitter(); splitter; ++chunk_idx, chunk = splitter())
                 handler(chunk_idx, std::move(chunk));

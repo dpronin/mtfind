@@ -86,8 +86,8 @@ public:
     auto workers_count() const noexcept { return workers_.size(); }
 
 private:
-    boost::asio::io_service io_;
-    std::vector<std::future<void>> workers_;
+    boost::asio::io_service                        io_;
+    std::vector<std::future<void>>                 workers_;
     std::unique_ptr<boost::asio::io_service::work> work_;
 };
 

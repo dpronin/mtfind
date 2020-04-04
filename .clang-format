@@ -5,6 +5,7 @@ AlignAfterOpenBracket: AlwaysBreak
 AccessModifierOffset: -4
 AlignEscapedNewlinesLeft: false
 AlignTrailingComments: true
+AlignConsecutiveDeclarations: true
 AllowAllParametersOfDeclarationOnNextLine: true
 AllowShortFunctionsOnASingleLine: true
 AllowShortIfStatementsOnASingleLine: false

@@ -94,9 +94,9 @@ public:
 private:
     Handler handler_;
 
-    std::atomic_bool stop_token_{false};
+    std::atomic_bool                                                              stop_token_{false};
     boost::lockfree::spsc_queue<Chunk, boost::lockfree::capacity<kQueueCapacity>> queue_;
-    std::future<void> worker_;
+    std::future<void>                                                             worker_;
 };
 
 } // namespace mtfind

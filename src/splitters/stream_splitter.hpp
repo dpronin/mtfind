@@ -65,7 +65,7 @@ private:
 ///
 /// @brief      This class is a specialization of template class StreamSplitter
 ///
-template<>
+template <>
 class StreamSplitter<char>
 {
 public:
@@ -108,7 +108,7 @@ public:
 
 private:
     std::istream &is_;
-    char         delim_;
+    char          delim_;
 };
 
 } // namespace mtfind

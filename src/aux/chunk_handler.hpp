@@ -37,7 +37,7 @@ public:
                    }));
     }
 
-    auto &findings() noexcept { return findings_; }
+    auto &      findings() noexcept { return findings_; }
     auto const &findings() const noexcept { return findings_; }
 
 protected:

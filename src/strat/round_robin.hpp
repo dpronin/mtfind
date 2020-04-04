@@ -6,11 +6,11 @@
 #include <algorithm>
 #include <iterator>
 #include <memory>
+#include <new>
 #include <thread>
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <new>
 
 #include <boost/range/algorithm/min_element.hpp>
 #include <boost/range/algorithm/transform.hpp>
@@ -67,8 +67,8 @@ int process_rr(ChunkReader reader, ChunkHandlerGenerator generator, size_t worke
 
     using data_aligned_t = typename std::aligned_storage<sizeof(ChunkProcessor), alignof(ChunkProcessor)>::type;
     std::unique_ptr<data_aligned_t[]> storage(new data_aligned_t[processors_count]);
-    auto *processors_ptr = reinterpret_cast<ChunkProcessor *>(storage.get());
-    auto processors      = boost::make_iterator_range(processors_ptr, processors_ptr + processors_count);
+    auto *                            processors_ptr = reinterpret_cast<ChunkProcessor *>(storage.get());
+    auto                              processors     = boost::make_iterator_range(processors_ptr, processors_ptr + processors_count);
 
     // safe allocating new chunk processors
     // if an exception takes place we will gracefully call all the dtors of created items before returning
