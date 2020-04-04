@@ -4,7 +4,6 @@
 #include <iterator>
 #include <type_traits>
 
-#include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/range/iterator_range.hpp>
 
 #include "aux/iterator_concept.hpp"

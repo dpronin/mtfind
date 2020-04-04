@@ -12,7 +12,6 @@
 #include <vector>
 #include <new>
 
-#include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/range/algorithm/min_element.hpp>
 #include <boost/range/algorithm/transform.hpp>
 #include <boost/range/algorithm_ext.hpp>

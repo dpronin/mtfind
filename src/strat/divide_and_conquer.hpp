@@ -11,7 +11,6 @@
 #include <vector>
 #include <algorithm>
 
-#include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/iterator_range.hpp>
 #include <boost/range/numeric.hpp>
