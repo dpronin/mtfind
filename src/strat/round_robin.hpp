@@ -80,9 +80,7 @@ int process_rr(ChunkReader reader, ChunkHandlerGenerator generator, size_t worke
         }
         catch (...)
         {
-            auto processors_dealloc_range = boost::make_iterator_range(
-                std::make_reverse_iterator(it),
-                std::make_reverse_iterator(processors.begin()));
+            auto processors_dealloc_range = boost::make_iterator_range(processors.begin(), it);
             for (auto &processor : processors_dealloc_range)
                 processor.~ChunkProcessor();
             throw;
@@ -99,9 +97,9 @@ int process_rr(ChunkReader reader, ChunkHandlerGenerator generator, size_t worke
     };
 
     // round robin handler switching among processors as handling chinks one by one
-    auto rr_handler = [&processors, cur_proc = processors.begin()](auto chunk_idx, auto const &value) mutable {
-        Chunk chunk{chunk_idx, value};
-        while (!(*cur_proc)(chunk))
+    auto rr_handler = [&processors, cur_proc = processors.begin()](auto chunk_idx, auto &&chunk) mutable {
+        Chunk rr_chunk{chunk_idx, std::forward<decltype(chunk)>(chunk)};
+        while (!(*cur_proc)(rr_chunk))
             ;
         ++cur_proc;
         if (processors.end() == cur_proc)

@@ -18,6 +18,11 @@ public:
     }
 
 public:
+    ///
+    /// @brief
+    /// This class describes a pattern validator that is dedicated to verifying
+    /// a pattern provided to the application through the parameters
+    ///
     class PatternValidator
     {
     public:

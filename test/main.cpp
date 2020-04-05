@@ -167,6 +167,7 @@ TYPED_TEST(Searcher, FailedPatternLookupNoComparator)
         { "Find\n\t\tme\nhere!",           "\r",                  },
         { "uuuuuu uuuuuuuuuuuj",           "m",                   },
         { "abcbeafeb",                     "afcb",                },
+        { "abc",                           "abcdef"               }
     };
     // clang-format on
 
@@ -259,7 +260,8 @@ TYPED_TEST(ComparatoredSearcher, FailedPatternLookupWithComparator)
         { "No matter what text is here",    "no_matter?",             comparators[0] },
         { "Find\n\t\tme\nhere!",            "Find",                   comparators[1] },
         { "uuuuuu uuuuuuuuuuut",            "uuu&",                   comparators[2] },
-        { "\xFF""\xFE""\x80""\x81""good",   "g?ud",                   comparators[3] }
+        { "\xFF""\xFE""\x80""\x81""good",   "g?ud",                   comparators[3] },
+        { "abc",                            "?b?def",                 comparators[3] }
     };
     // clang-format on
 

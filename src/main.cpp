@@ -33,7 +33,7 @@ namespace
 {
 
 template <typename... Args>
-int streamed_run(std::istream &is, Args &&... args)
+int run(std::istream &is, Args &&... args)
 {
     is >> std::noskipws;
     return strat::round_robin(StreamSplitter<char>(is, '\n'), std::forward<Args>(args)...);
@@ -49,7 +49,7 @@ int run(boost::string_view const input_path, PatternSearcher &&searcher)
 
     // the function printing out the findings for a line
     auto line_findings_sink = [](auto const &line_finding) {
-        /*                     line number          */
+                  /*             line number        */
         std::cout << std::get<0>(line_finding) << ' '
                   /*           position in line     */
                   << std::get<1>(line_finding) << ' '
@@ -111,7 +111,7 @@ int run(boost::string_view const input_path, PatternSearcher &&searcher)
                 return EXIT_FAILURE;
             }
 
-            return streamed_run(stream_source_file, tokenizer, line_findings_number_sink, line_findings_sink);
+            return run(stream_source_file, tokenizer, line_findings_number_sink, line_findings_sink);
         }
         else
         {
@@ -127,7 +127,7 @@ int run(boost::string_view const input_path, PatternSearcher &&searcher)
         // it can be done since no scanf-like functions are used in the application
         // it could slightly increase performance
         std::cin.sync_with_stdio(false);
-        return streamed_run(std::cin, tokenizer, line_findings_number_sink, line_findings_sink);
+        return run(std::cin, tokenizer, line_findings_number_sink, line_findings_sink);
     }
 }
 

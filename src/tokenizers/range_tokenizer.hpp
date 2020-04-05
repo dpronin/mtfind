@@ -40,7 +40,7 @@ public:
             auto token = searcher_(first, last);
             if (token.empty())
                 break;
-            first = token.end();
+            first = std::end(token);
             *out  = std::move(token);
         }
     }
