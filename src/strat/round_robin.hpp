@@ -96,7 +96,7 @@ int process_rr(ChunkReader reader, ChunkHandlerGenerator generator, size_t worke
             processor.~ChunkProcessor();
     };
 
-    // round robin handler switching among processors as handling chinks one by one
+    // round robin handler switching among processors as handling chunks one by one
     auto rr_handler = [&processors, cur_proc = processors.begin()](auto chunk_idx, auto &&chunk) mutable {
         Chunk rr_chunk{chunk_idx, std::forward<decltype(chunk)>(chunk)};
         while (!(*cur_proc)(rr_chunk))
