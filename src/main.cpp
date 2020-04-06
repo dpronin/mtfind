@@ -40,7 +40,7 @@ int run(std::istream &is, Args &&... args)
 }
 
 template <typename PatternSearcher>
-int run(boost::string_view const input_path, PatternSearcher &&searcher)
+int run(boost::string_view input_path, PatternSearcher &&searcher)
 {
     // the function printing out the overall number of findings
     auto line_findings_number_sink = [](auto findings_number) {
