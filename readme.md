@@ -37,7 +37,7 @@ bash> cd mtfind
 bash> conan install . -if debug/ -s arch=x86_64 -s arch_build=x86_64 -s compiler=gcc -s compiler.version=9.2 -s compiler.libcxx=libstdc++11 -s build_type=Debug --build missing
 ```
 All the parameters provided to conan are vital. By using them conan determines whether it can download already built binary package from a remote or it must build a dependency up on the host by itself (if `--build missing` parameter is passed)
-After the command has finished you will get `debug` directory in the root of the project 
+By the time the command has finished you will have got `debug` directory in the root of the project 
 
 To install prerequisites for __Release mode__ leaving other parameters untouched, use the following command:
 ```bash
