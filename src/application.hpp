@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include <boost/utility/string_view.hpp>
+
 namespace mtfind
 {
 
@@ -50,6 +52,15 @@ public:
     {
         return [](auto c, auto p) { return '?' == p || c == p; };
     }
+
+    ///
+    /// @brief      Cheks if the input path is associated with stdin
+    ///
+    /// @param[in]  path  The input path
+    ///
+    /// @return     True if the input path requested is stdin, False otherwise
+    ///
+    bool use_stdin(boost::string_view path) const noexcept { return path == "-"; };
 
     ///
     /// @brief      Gets the validator for application's pattern provided through the arguments

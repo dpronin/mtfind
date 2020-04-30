@@ -61,9 +61,7 @@ int run(boost::string_view input_path, PatternSearcher &&searcher)
     using Tokenizer = RangeTokenizer<PatternSearcher>;
     Tokenizer tokenizer(std::forward<PatternSearcher>(searcher));
 
-    // input may be stdin specified as '-' or a path to a file
-    auto use_stdin = [](auto &&input_path) { return input_path == "-"; };
-    if (!use_stdin(input_path))
+    if (!Application::instance().use_stdin(input_path))
     {
         boost::filesystem::path const input_file_path(input_path.data());
 
