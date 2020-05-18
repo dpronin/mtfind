@@ -3,6 +3,7 @@
 bash> git clone git@github.com:dannftk/mtfind.git
 ```
 # Build requirements
+- [cmake](https://cmake.org/) to configure the project. Minimum required version is __3.9.6__
 - [conan](https://conan.io/) to download all the dependencies of the application and configure with a certain set of parameters. You can install __conan__ by giving a command to __pip__:
     ```bash
         bash> pip install --user conan
