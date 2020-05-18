@@ -14,7 +14,7 @@ class Mtfind(ConanFile):
     requires = "boost/[~1.65]@conan/stable"
 
     build_requires = \
-        "gtest/[~1.8]@bincrafters/stable", \
+        "gtest/[~1.10]", \
         "benchmark/[~1.5]"
 
     scm = {
