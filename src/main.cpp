@@ -6,15 +6,14 @@
 #include <iterator>
 #include <stdexcept>
 #include <utility>
+#include <filesystem>
+#include <string_view>
+#include <fstream>
 
 #include <boost/algorithm/cxx11/all_of.hpp>
-#include <boost/filesystem/fstream.hpp>
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
 #include <boost/function_output_iterator.hpp>
 #include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/range/algorithm/copy.hpp>
-#include <boost/utility/string_view.hpp>
 
 #include "searchers/boyer_moore_searcher.hpp"
 #include "searchers/naive_searcher.hpp"
@@ -40,7 +39,7 @@ int run(std::istream &is, Args &&... args)
 }
 
 template <typename PatternSearcher>
-int run(boost::string_view input_path, PatternSearcher &&searcher)
+int run(std::string_view input_path, PatternSearcher &&searcher)
 {
     // the function printing out the overall number of findings
     auto line_findings_number_sink = [](auto findings_number) {
@@ -58,29 +57,27 @@ int run(boost::string_view input_path, PatternSearcher &&searcher)
     };
 
     // define a tokenizer based on the searcher finding subranges
-    using Tokenizer = RangeTokenizer<PatternSearcher>;
-    Tokenizer tokenizer(std::forward<PatternSearcher>(searcher));
-
+    RangeTokenizer tokenizer(std::forward<PatternSearcher>(searcher));
     if (!Application::instance().use_stdin(input_path))
     {
-        boost::filesystem::path const input_file_path(input_path.data());
+        std::filesystem::path const input_file_path(input_path);
 
         // check if the input file exists
-        if (!boost::filesystem::exists(input_file_path))
+        if (!std::filesystem::exists(input_file_path))
         {
             std::cerr << "error: input file " << input_file_path << " doesn't exist\n";
             return EXIT_FAILURE;
         }
 
         // check if the input file is a regular file, not a directory, socket, block device, etc.
-        if (!boost::filesystem::is_regular_file(input_file_path))
+        if (!std::filesystem::is_regular_file(input_file_path))
         {
             std::cerr << "error: input file " << input_file_path << " is not regular\n";
             return EXIT_FAILURE;
         }
 
         // check if the input file is empty, if it is, no processing is required
-        if (boost::filesystem::is_empty(input_file_path))
+        if (std::filesystem::is_empty(input_file_path))
         {
             std::cerr << "input file " << input_file_path << " is empty\n";
             return EXIT_SUCCESS;
@@ -101,15 +98,15 @@ int run(boost::string_view input_path, PatternSearcher &&searcher)
         {
             std::cerr << "WARNING: coudn't map input file " << input_file_path << " to memory\n"
                       << "WARNING: falling back to the default slow stream-oriented reading mode\n";
-
-            boost::filesystem::ifstream stream_source_file{input_file_path};
-            if (!stream_source_file)
+            if (std::ifstream stream_source_file{input_file_path}; stream_source_file)
+            {
+                return run(stream_source_file, tokenizer, line_findings_number_sink, line_findings_sink);
+            }
+            else
             {
                 std::cerr << "opening file " << input_file_path << " in stream-mode failed\n";
                 return EXIT_FAILURE;
             }
-
-            return run(stream_source_file, tokenizer, line_findings_number_sink, line_findings_sink);
         }
         else
         {
@@ -174,7 +171,7 @@ try
     }
 
     // preserve a pattern string given in argv[2]
-    boost::string_view const pattern(argv[2]);
+    std::string_view const pattern(argv[2]);
     // check the pattern against correctness of its content by given validator
     auto pattern_validator = Application::instance().pattern_validator();
     if (!boost::algorithm::all_of(pattern, std::ref(pattern_validator)))

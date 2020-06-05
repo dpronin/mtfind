@@ -1,7 +1,8 @@
-cmake_minimum_required(VERSION 3.9.6 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
+project(mtfind VERSION 1.0.0 LANGUAGES CXX)
 
 if (NOT EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake AND GEN_CONAN_BUILD_INFO)
-    execute_process(COMMAND conan install ${CMAKE_CURRENT_LIST_DIR}/ -if ${CMAKE_BINARY_DIR}/ -pr gcc --build missing RESULT_VARIABLE CONAN_INSTALL_RESULT)
+    execute_process(COMMAND conan install ${CMAKE_CURRENT_LIST_DIR}/ -if ${CMAKE_BINARY_DIR}/ -pr default -s build_type=${CMAKE_BUILD_TYPE} --build missing RESULT_VARIABLE CONAN_INSTALL_RESULT)
     if(NOT CONAN_INSTALL_RESULT EQUAL 0)
         message(FATAL_ERROR "Failed to conan install")
     endif()
@@ -11,11 +12,10 @@ if (NOT EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     message(FATAL_ERROR "conanbuildinfo.cmake required is missing")
 endif()
 
-project(mtfind VERSION 0.1.0 LANGUAGES CXX)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 set(MTFIND_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/src)
 

@@ -4,14 +4,14 @@ from conans import ConanFile, CMake, tools
 
 class Mtfind(ConanFile):
     name = "mtfind"
-    version = "0.1.0"
+    version = "1.0.0"
     author = "Denis Pronin"
     url = "https://github.com/dannftk/mtfind"
     description = "A tool for finding substrings in a file"
     settings = "os", "compiler", "build_type", "arch"
     generators = "cmake"
 
-    requires = "boost/[~1.65]@conan/stable"
+    requires = "boost/[~1.73]"
 
     build_requires = \
         "gtest/[~1.10]", \

@@ -1,8 +1,7 @@
 #pragma once
 
 #include <iostream>
-
-#include <boost/utility/string_view.hpp>
+#include <string_view>
 
 namespace mtfind
 {
@@ -28,8 +27,7 @@ public:
     class PatternValidator
     {
     public:
-        template <typename T>
-        bool operator()(T c) const noexcept
+        bool operator()(char c) const noexcept
         {
             has_masked_symbols_ = has_masked_symbols_ || '?' == c;
             return 0 <= c && c <= 0x7E && '\n' != c && '\r' != c || '?' == c;
@@ -50,7 +48,7 @@ public:
     ///
     auto masked_pattern_comparator() const noexcept
     {
-        return [](auto c, auto p) { return '?' == p || c == p; };
+        return [](char c, char p) { return '?' == p || c == p; };
     }
 
     ///
@@ -60,7 +58,7 @@ public:
     ///
     /// @return     True if the input path requested is stdin, False otherwise
     ///
-    bool use_stdin(boost::string_view path) const noexcept { return path == "-"; };
+    bool use_stdin(std::string_view path) const noexcept { return path == "-"; };
 
     ///
     /// @brief      Gets the validator for application's pattern provided through the arguments
@@ -102,7 +100,7 @@ examples:
     > cat input.txt | mtfind - "wor:d"
         Will do the same as the previous example except that stdin is used, that is tied to stdout of 'cat' by pipelining
     )help"
-                     "\n";
+                     << std::endl;
     }
 
 private:
