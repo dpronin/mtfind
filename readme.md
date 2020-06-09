@@ -3,14 +3,14 @@
 bash> git clone git@github.com:dannftk/mtfind.git
 ```
 # Build requirements
-- [cmake](https://cmake.org/) to configure the project. Minimum required version is __3.9.6__
+- [cmake](https://cmake.org/) to configure the project. Minimum required version is __3.14__
 - [conan](https://conan.io/) to download all the dependencies of the application and configure with a certain set of parameters. You can install __conan__ by giving a command to __pip__:
     ```bash
         bash> pip install --user conan
     ```
     To use __pip__ you need to install __python__ interpreter. I highly recommend to install __python3__-based versions in order to avoid unexpected results with __conan__
 
-- A C++ compiler with __C++14__ and __boost-1.65.1__, __gtest-1.10__, __google-benchmark-1.5__ support. The package has been successfully tested on compilation with __gcc-9.2__ (g++ with libstdc++11)
+- A C++ compiler with __C++17__, __boost-1.73__, __gtest-1.10__, __google-benchmark-1.5__ support. The package has been successfully tested on compilation with __gcc-9.2__ (g++ with libstdc++11)
 
 # Preparing with conan
 First you need to set __conan's remote list__ to be able to download packages prescribed in the `conanfile.py` as requirements (dependencies). You need at least two remotes known by conan. We need __conan-center__ and __bincrafters__ repositories available. To check them if they already exist run the following command:
