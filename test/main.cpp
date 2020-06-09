@@ -40,7 +40,7 @@ struct RangeSplitterTest : public Test
 };
 
 using RangeSplitters = Types<RangeSplitter<std::string::const_iterator>>;
-TYPED_TEST_CASE(RangeSplitterTest, RangeSplitters);
+TYPED_TEST_SUITE(RangeSplitterTest, RangeSplitters);
 
 TYPED_TEST(RangeSplitterTest, SplitsStringInLines)
 {
@@ -82,7 +82,7 @@ struct StreamSplitterTest : public Test
 };
 
 using StreamSplitters = Types<StreamSplitter<char>>;
-TYPED_TEST_CASE(StreamSplitterTest, StreamSplitters);
+TYPED_TEST_SUITE(StreamSplitterTest, StreamSplitters);
 
 TYPED_TEST(StreamSplitterTest, SplitsStringStreamInLines)
 {
@@ -127,7 +127,7 @@ using Searchers = Types<
     NaiveSearcher<std::string>,
     BoyerMooreSearcher<std::string>,
     BoyerMooreSearcher<std::string, searchers::Boosted>>;
-TYPED_TEST_CASE(Searcher, Searchers);
+TYPED_TEST_SUITE(Searcher, Searchers);
 
 TYPED_TEST(Searcher, SuccessfulPatternLookupNoComparator)
 {
@@ -190,7 +190,7 @@ struct ComparatoredSearcher : public Test
 using ComparatoredSearchers = Types<
     NaiveSearcher<std::string, std::function<bool(char, char)>>,
     BoyerMooreSearcher<std::string, std::function<bool(char, char)>>>;
-TYPED_TEST_CASE(ComparatoredSearcher, ComparatoredSearchers);
+TYPED_TEST_SUITE(ComparatoredSearcher, ComparatoredSearchers);
 
 TYPED_TEST(ComparatoredSearcher, SuccessfulPatternLookupWithComparator)
 {
@@ -200,7 +200,7 @@ TYPED_TEST(ComparatoredSearcher, SuccessfulPatternLookupWithComparator)
     // clang-format off
     std::vector<comparator_t> const comparators = {
         [](auto c, auto p){ return '?' == p || p == c; },                         // the pattern comparator used in the application
-        [](auto c, auto p){ return '!' == p && 'e' == c || '?' == p || p == c; }, // an arbitrary pattern comparator
+        [](auto c, auto p){ return ('!' == p && 'e' == c) || '?' == p || p == c; }, // an arbitrary pattern comparator
         [](auto c, auto p){ return ('&' == p && ('u' - c) == 1) || p == c; },     // an arbitrary pattern comparator
     };
     // clang-format on
@@ -293,7 +293,7 @@ struct Tokenizer : public Test
 using Tokenizers = Types<
     RangeTokenizer<std::function<boost::iterator_range<std::string::const_iterator>(
         std::string::const_iterator, std::string::const_iterator)>>>;
-TYPED_TEST_CASE(Tokenizer, Tokenizers);
+TYPED_TEST_SUITE(Tokenizer, Tokenizers);
 
 TYPED_TEST(Tokenizer, Tokenizes)
 {

@@ -30,7 +30,7 @@ public:
         bool operator()(char c) const noexcept
         {
             has_masked_symbols_ = has_masked_symbols_ || '?' == c;
-            return 0 <= c && c <= 0x7E && '\n' != c && '\r' != c || '?' == c;
+            return (0 <= c && c <= 0x7E && '\n' != c && '\r' != c) || ('?' == c);
         }
 
         bool has_masked_symbols() const noexcept { return has_masked_symbols_; }
