@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 project(mtfind VERSION 1.0.0 LANGUAGES CXX)
 
+include(CTest)
+
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
@@ -33,8 +35,7 @@ endif()
 
 add_subdirectory(src)
 
-if (ENABLE_TEST)
-    enable_testing()
+if (BUILD_TESTING)
     add_subdirectory(test)
 endif()
 
