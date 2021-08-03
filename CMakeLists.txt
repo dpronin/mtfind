@@ -7,13 +7,6 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
-if (NOT EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake AND GEN_CONAN_BUILD_INFO)
-    execute_process(COMMAND conan install ${CMAKE_CURRENT_LIST_DIR}/ -if ${CMAKE_BINARY_DIR}/ -pr default -s build_type=${CMAKE_BUILD_TYPE} --build missing RESULT_VARIABLE CONAN_INSTALL_RESULT)
-    if(NOT CONAN_INSTALL_RESULT EQUAL 0)
-        message(FATAL_ERROR "Failed to conan install")
-    endif()
-endif()
-
 if (NOT EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     message(FATAL_ERROR "conanbuildinfo.cmake required is missing")
 endif()

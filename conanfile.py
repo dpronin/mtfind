@@ -11,10 +11,10 @@ class Mtfind(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     generators = "cmake"
 
-    requires = "boost/[~1.73]"
+    requires = "boost/[~1.76]"
 
     build_requires = \
-        "gtest/[~1.10]", \
+        "gtest/[~1.11]", \
         "benchmark/[~1.5]"
 
     scm = {
@@ -29,7 +29,6 @@ class Mtfind(ConanFile):
         cmake = CMake(self)
         cmake.verbose = verbose
         cmake.definitions['CMAKE_BUILD_TYPE'] = "Debug" if self.settings.build_type == "Debug" else "Release"
-        cmake.definitions['ENABLE_TEST'] = enable_test
         cmake.definitions['ENABLE_BENCH'] = enable_bench
         cmake.definitions['ENABLE_GDB_SYMBOLS'] = self.settings.build_type == "Debug"
         cmake.configure(source_folder = self.name)
