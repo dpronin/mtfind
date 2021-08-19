@@ -22,11 +22,11 @@ bash> conan remote list
 If required remote is already there you will see output alike:
 ```bash
 bash> conan remote list
-conan-center: https://conan.bintray.com [Verify SSL: True]
+conan-center: https://center.conan.io [Verify SSL: True]
 ```
 If one doesn't appear you should set it by running the command:
 ```bash
-bash> conan remote add conan-center https://conan.bintray.com
+bash> conan remote add conan-center https://center.conan.io
 ```
 Since now you're ready to perform conan installation.
 
