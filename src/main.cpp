@@ -1,18 +1,18 @@
 #include <cstddef>
 #include <cstdlib>
 
+#include <filesystem>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <iterator>
 #include <stdexcept>
-#include <utility>
-#include <filesystem>
 #include <string_view>
-#include <fstream>
+#include <utility>
 
 #include <boost/algorithm/cxx11/all_of.hpp>
-#include <boost/function_output_iterator.hpp>
 #include <boost/iostreams/device/mapped_file.hpp>
+#include <boost/iterator/function_output_iterator.hpp>
 #include <boost/range/algorithm/copy.hpp>
 
 #include "searchers/boyer_moore_searcher.hpp"
@@ -32,7 +32,7 @@ namespace
 {
 
 template <typename... Args>
-int run(std::istream &is, Args &&... args)
+int run(std::istream &is, Args &&...args)
 {
     is >> std::noskipws;
     return strat::round_robin(StreamSplitter<char>(is, '\n'), std::forward<Args>(args)...);
@@ -42,13 +42,15 @@ template <typename PatternSearcher>
 int run(std::string_view input_path, PatternSearcher &&searcher)
 {
     // the function printing out the overall number of findings
-    auto line_findings_number_sink = [](auto findings_number) {
+    auto line_findings_number_sink = [](auto findings_number)
+    {
         std::cout << findings_number << '\n';
     };
 
     // the function printing out the findings for a line
-    auto line_findings_sink = [](auto const &line_finding) {
-                  /*             line number        */
+    auto line_findings_sink = [](auto const &line_finding)
+    {
+        /*             line number        */
         std::cout << std::get<0>(line_finding) << ' '
                   /*           position in line     */
                   << std::get<1>(line_finding) << ' '

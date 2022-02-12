@@ -316,14 +316,15 @@ TYPED_TEST(Tokenizer, Tokenizes)
     // does not start from an upper letter, hence the searcher will be called one more time
     // than number of words found
     SearcherMock searcher;
-    EXPECT_CALL(searcher, search(_, _)).Times(Exactly(exp_tokens.size() + 1)).WillRepeatedly(Invoke([](auto first, auto last) {
+    EXPECT_CALL(searcher, search(_, _)).Times(Exactly(exp_tokens.size() + 1)).WillRepeatedly(Invoke([](auto first, auto last)
+                                                                                                    {
         // searching for words starting from an upper letter
         first = std::find_if(first, last, [](auto c) { return 'A' <= c && c <= 'Z'; });
-        return std::make_pair(first, std::find(first, last, ' '));
-    }));
+        return std::make_pair(first, std::find(first, last, ' ')); }));
 
     // searcher wrapper is essential because the searcher itself is uncopiable
-    auto searcher_wrapper = [&searcher](auto &&... args) { return searcher(std::forward<decltype(args)>(args)...); };
+    auto searcher_wrapper = [&searcher](auto &&...args)
+    { return searcher(std::forward<decltype(args)>(args)...); };
 
     TokenizerT tokenizer(searcher_wrapper);
 
@@ -346,13 +347,14 @@ TYPED_TEST(Tokenizer, ReturnsEmptyCollection)
     SearcherMock      searcher;
 
     // searcher returns that nothing has been found, must be called exactly once
-    EXPECT_CALL(searcher, search(_, _)).WillOnce(Invoke([](auto first, auto last) {
+    EXPECT_CALL(searcher, search(_, _)).WillOnce(Invoke([](auto first, auto last)
+                                                        {
         // searching for words starting from an upper letter
-        return std::make_pair(last, last);
-    }));
+        return std::make_pair(last, last); }));
 
     // searcher wrapper is essential because the searcher itself is uncopiable
-    auto searcher_wrapper = [&searcher](auto &&... args) { return searcher(std::forward<decltype(args)>(args)...); };
+    auto searcher_wrapper = [&searcher](auto &&...args)
+    { return searcher(std::forward<decltype(args)>(args)...); };
 
     RangeTokenizer<decltype(searcher_wrapper)> tokenizer(searcher_wrapper);
 
@@ -399,8 +401,10 @@ TEST(ThreadedChunkProcessor, HandlesTasksAsChunksExpectedTimes)
     TaskMock task;
     EXPECT_CALL(task, exec()).Times(Exactly(kCallsCount));
 
-    std::function<void()> caller  = [&task] { task(); };
-    auto                  handler = [](std::function<void()> &&caller) { caller(); };
+    std::function<void()> caller = [&task]
+    { task(); };
+    auto handler = [](std::function<void()> &&caller)
+    { caller(); };
 
     ThreadedChunkProcessor<decltype(handler), std::function<void()>> processor(handler);
 
@@ -415,8 +419,10 @@ TEST(ThreadedChunkProcessor, DoesNotHandleTaskAsChunkIfNotRunning)
     TaskMock task;
     EXPECT_CALL(task, exec()).Times(0);
 
-    std::function<void()> caller  = [&task] { task(); };
-    auto                  handler = [](auto &&caller) { caller(); };
+    std::function<void()> caller = [&task]
+    { task(); };
+    auto handler = [](auto &&caller)
+    { caller(); };
 
     ThreadedChunkProcessor<decltype(handler), std::function<void()>> processor(handler);
 

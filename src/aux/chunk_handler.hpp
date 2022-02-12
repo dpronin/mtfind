@@ -6,7 +6,7 @@
 #include <tuple>
 #include <utility>
 
-#include <boost/function_output_iterator.hpp>
+#include <boost/iterator/function_output_iterator.hpp>
 
 #include "chunk.hpp"
 
@@ -29,15 +29,14 @@ public:
 
     void operator()(size_t chunk_idx, value_type const &chunk_value)
     {
-        tokenizer_(chunk_value, boost::make_function_output_iterator([this, chunk_idx = chunk_idx + 1, first = std::begin(chunk_value)](auto &&token) {
-                       findings_.push_back(std::make_tuple(
-                           chunk_idx,
-                           static_cast<size_t>(std::distance(first, token.begin()) + 1),
-                           ValueType{token.begin(), token.end()}));
-                   }));
+        tokenizer_(chunk_value, boost::make_function_output_iterator([this, chunk_idx = chunk_idx + 1, first = std::begin(chunk_value)](auto &&token)
+                                                                     { findings_.push_back(std::make_tuple(
+                                                                           chunk_idx,
+                                                                           static_cast<size_t>(std::distance(first, token.begin()) + 1),
+                                                                           ValueType{token.begin(), token.end()})); }));
     }
 
-    auto &      findings() noexcept { return findings_; }
+    auto       &findings() noexcept { return findings_; }
     auto const &findings() const noexcept { return findings_; }
 
 protected:

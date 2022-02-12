@@ -11,7 +11,7 @@ class Mtfind(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     generators = "cmake"
 
-    requires = "boost/[~1.76]"
+    requires = "boost/[~1.78]"
 
     build_requires = \
         "gtest/[~1.11]", \
