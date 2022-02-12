@@ -1,6 +1,6 @@
 # Cloning repository
 ```bash
-bash> git clone git@github.com:dannftk/mtfind.git
+bash> git clone git@github.com:dpronin/mtfind.git
 ```
 # Build requirements
 - [cmake](https://cmake.org/) to configure the project. Minimum required version is __3.16__

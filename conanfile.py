@@ -6,7 +6,7 @@ class Mtfind(ConanFile):
     name = "mtfind"
     version = "1.1.0"
     author = "Denis Pronin"
-    url = "https://github.com/dannftk/mtfind"
+    url = "https://github.com/dpronin/mtfind"
     description = "A tool for finding substrings in a file"
     settings = "os", "compiler", "build_type", "arch"
     generators = "cmake_find_package"
