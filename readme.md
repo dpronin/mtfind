@@ -3,7 +3,7 @@
 bash> git clone git@github.com:dannftk/mtfind.git
 ```
 # Build requirements
-- [cmake](https://cmake.org/) to configure the project. Minimum required version is __3.14__
+- [cmake](https://cmake.org/) to configure the project. Minimum required version is __3.16__
 - [conan](https://conan.io/) to download all the dependencies of the application and configure with a certain set of parameters. You can install __conan__ by giving a command to __pip__:
     ```bash
         bash> pip install --user conan
@@ -15,18 +15,18 @@ bash> git clone git@github.com:dannftk/mtfind.git
 The package has been successfully tested on compilation with __gcc-10.3__ (g++ with libstdc++11), __llvm-clang-12.0__ (clang++ with libc++)
 
 # Preparing with conan
-First you need to set __conan's remote list__ to be able to download packages prescribed in the `conanfile.py` as requirements (dependencies). You need at least one remote known by conan. We need __conan-center__ repository available. To check if it already exists run the following command:
+First you need to set __conan's remote list__ to be able to download packages prescribed in the `conanfile.py` as requirements (dependencies). You need at least one remote known by conan. We need __conancenter__ repository available. To check if it already exists run the following command:
 ```bash
 bash> conan remote list
 ```
 If required remote is already there you will see output alike:
 ```bash
 bash> conan remote list
-conan-center: https://center.conan.io [Verify SSL: True]
+conancenter: https://center.conan.io [Verify SSL: True]
 ```
 If one doesn't appear you should set it by running the command:
 ```bash
-bash> conan remote add conan-center https://center.conan.io
+bash> conan remote add conancenter https://center.conan.io
 ```
 Since now you're ready to perform conan installation.
 
@@ -34,7 +34,7 @@ Since now you're ready to perform conan installation.
 
 If you have resolved all the possible issues described above, you can start installation with conan. Below there is installed a conan's environment with making use of __gcc-10.3__, __libstdc++11__, architecture __x86\_64__. If something does not correspond to your environment (for example, __gcc__ is a lower version), change it. Installation with __gcc-10.3__, __libstdc++11__, __x86\_64__, __Debug mode__:
 ```
-bash> cd dpiquic
+bash> cd mtfind
 bash> conan install . -if debug/ -s arch=x86_64 -s arch_build=x86_64 -s compiler=gcc -s compiler.version=10.3 -s compiler.libcxx=libstdc++11 -s build_type=Debug --build missing
 ```
 All the parameters provided to conan are vital. By using them conan determines whether it can download already built binary package from a remote or it must build a dependency up on the host by itself (if `--build missing` parameter is passed)
@@ -65,7 +65,7 @@ The project is configured. To built it run:
 ```bash
 bash> cmake --build .
 ```
-To enable disable __unit and integrational tests__, provide an additional parameter `-DBUILD_TESTING=OFF` to __cmake__ while configuring
+To enable building __unit and integrational tests__, provide an additional parameter `-DBUILD_TESTING=OFF` to __cmake__ while configuring
 
 To enable building __benchmarks__, provide an additional parameter `-DENABLE_BENCH=ON` to __cmake__ while configuring
 
