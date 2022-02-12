@@ -1,4 +1,6 @@
 find_package(Threads REQUIRED)
+find_package(Boost REQUIRED COMPONENTS system)
+find_package(GTest REQUIRED)
 
 set(SOURCES
     main.cpp
@@ -19,11 +21,11 @@ set(HEADERS
     lorem_ipsum.hpp
 )
 
-add_executable(mtfind_test ${SOURCES} ${HEADERS})
-target_include_directories(mtfind_test PRIVATE ${CMAKE_CURRENT_LIST_DIR} ${MTFIND_SRC_DIR})
+add_executable(ut ${SOURCES} ${HEADERS})
+target_include_directories(ut PRIVATE ${CMAKE_CURRENT_LIST_DIR} ${MTFIND_SRC_DIR})
 
-add_test(NAME GTestMtFind COMMAND mtfind_test)
+add_test(NAME MTFIND_UT COMMAND ut)
 
-target_link_libraries(mtfind_test PRIVATE Threads::Threads)
-target_link_libraries(mtfind_test PRIVATE CONAN_PKG::boost)
-target_link_libraries(mtfind_test PRIVATE CONAN_PKG::gtest)
+target_link_libraries(ut PRIVATE Threads::Threads)
+target_link_libraries(ut PRIVATE Boost::boost Boost::system)
+target_link_libraries(ut PRIVATE GTest::gtest GTest::gmock)

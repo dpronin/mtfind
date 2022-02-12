@@ -4,18 +4,12 @@ from conans import ConanFile, CMake, tools
 
 class Mtfind(ConanFile):
     name = "mtfind"
-    version = "1.0.0"
+    version = "1.1.0"
     author = "Denis Pronin"
     url = "https://github.com/dannftk/mtfind"
     description = "A tool for finding substrings in a file"
     settings = "os", "compiler", "build_type", "arch"
-    generators = "cmake"
-
-    requires = "boost/[~1.78]"
-
-    build_requires = \
-        "gtest/[~1.11]", \
-        "benchmark/[~1.5]"
+    generators = "cmake_find_package"
 
     scm = {
         "type": "git",
@@ -24,6 +18,13 @@ class Mtfind(ConanFile):
         "revision": "auto",
         "username": "git"
     }
+
+    def requirements(self):
+        self.requires("boost/[~1.78]")
+
+    def build_requirements(self):
+        self.build_requires("gtest/[~1.11]")
+        self.build_requires("benchmark/[~1.6]")
 
     def _configure(self, enable_test = False, enable_bench = False, verbose = True):
         cmake = CMake(self)
