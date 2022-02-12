@@ -10,7 +10,7 @@ bash> git clone git@github.com:dannftk/mtfind.git
     ```
     To use __pip__ you need to install __python__ interpreter. I highly recommend to install __python3__-based versions in order to avoid unexpected results with __conan__
 
-- A C++ compiler with __C++17__, __boost-1.76__, __gtest-1.11__, __google-benchmark-1.5__ support
+- A C++ compiler with __C++20__, __boost-1.78__, __gtest-1.11__, __google-benchmark-1.6__ support
 
 The package has been successfully tested on compilation with __gcc-10.3__ (g++ with libstdc++11), __llvm-clang-12.0__ (clang++ with libc++)
 
